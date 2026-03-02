@@ -87,11 +87,22 @@ export class ProjectsService {
       where: { ownerId: userId, status: 'completed' },
     });
 
+    const today = new Date();
+    const delayed = await this.projectsRepository
+      .createQueryBuilder('project')
+      .where('project.ownerId = :userId', { userId })
+      .andWhere('project.deadline IS NOT NULL')
+      .andWhere('project.deadline < :today', { today })
+      .andWhere('project.status NOT IN (:...excludedStatuses)', {
+        excludedStatuses: ['completed', 'archived'],
+      })
+      .getCount();
+
     return {
       total,
       active,
       completed,
-      delayed: 0, // TODO: 计算延期项目
+      delayed,
     };
   }
 }

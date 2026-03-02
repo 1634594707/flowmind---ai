@@ -21,6 +21,15 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
+  @Get('stats')
+  async getStats(@Request() req) {
+    const stats = await this.projectsService.getStats(req.user.userId);
+    return {
+      code: 200,
+      data: stats,
+    };
+  }
+
   @Post()
   async create(@Body() createProjectDto: CreateProjectDto, @Request() req) {
     const project = await this.projectsService.create(createProjectDto, req.user.userId);

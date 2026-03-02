@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectsService } from '../projects/projects.service';
@@ -45,7 +56,11 @@ export class DocumentsController {
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateDocumentDto: any, @Request() req) {
-    const document = await this.documentsService.updateForUser(id, updateDocumentDto, req.user.userId);
+    const document = await this.documentsService.updateForUser(
+      id,
+      updateDocumentDto,
+      req.user.userId,
+    );
     return {
       code: 200,
       message: '文档更新成功',
