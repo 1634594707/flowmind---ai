@@ -8,6 +8,7 @@
     "backend"
   ],
   "scripts": {
+    "setup:db": "node scripts/setup-database.js",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run start:dev",
@@ -18,7 +19,7 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "db:migrate": "cd backend && npm run migration:run",
-    "db:seed": "cd backend && npm run seed:run",
+    "db:seed": "cd backend && npm run seed",
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "cd frontend && npm run test",
     "test:backend": "cd backend && npm run test",

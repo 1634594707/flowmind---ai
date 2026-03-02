@@ -29,6 +29,13 @@ export class User {
   @Column({ default: 'user' })
   role: string;
 
+  @Column({ default: false })
+  twoFactorEnabled: boolean;
+
+  @Column({ nullable: true })
+  @Exclude()
+  twoFactorSecret: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

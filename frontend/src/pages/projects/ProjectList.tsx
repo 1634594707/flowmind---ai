@@ -1,72 +1,54 @@
-import { useState } from 'react'
-import { Card, Input, Select, Tag } from 'antd'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Card, Input, Select, Tag, message } from 'antd'
 import { 
   FolderIcon, 
   MagnifyingGlassIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
+import { projectService, type Project } from '../../services/project.service'
 
 const ProjectList = () => {
+  const navigate = useNavigate()
   const [searchText, setSearchText] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
 
-  const projects = [
-    {
-      id: '1',
-      name: 'FlowMind 平台',
-      description: 'AI 驱动的 SDLC 管理平台',
-      status: 'active',
-      statusText: '进行中',
-      progress: 75,
-      members: 5,
-      tasks: { total: 48, completed: 36 },
-      deadline: '2026-04-15',
-      tags: ['AI', 'SaaS', '企业级'],
-    },
-    {
-      id: '2',
-      name: '电商系统重构',
-      description: '微服务架构升级',
-      status: 'active',
-      statusText: '进行中',
-      progress: 45,
-      members: 8,
-      tasks: { total: 64, completed: 29 },
-      deadline: '2026-05-20',
-      tags: ['微服务', '重构'],
-    },
-    {
-      id: '3',
-      name: '移动端 App',
-      description: 'React Native 跨平台应用',
-      status: 'planning',
-      statusText: '规划中',
-      progress: 15,
-      members: 3,
-      tasks: { total: 32, completed: 5 },
-      deadline: '2026-06-30',
-      tags: ['移动端', 'React Native'],
-    },
-    {
-      id: '4',
-      name: '数据分析平台',
-      description: '实时数据可视化系统',
-      status: 'completed',
-      statusText: '已完成',
-      progress: 100,
-      members: 6,
-      tasks: { total: 56, completed: 56 },
-      deadline: '2026-02-28',
-      tags: ['数据', '可视化'],
-    },
-  ]
+  const [loading, setLoading] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+
+  useEffect(() => {
+    void loadProjects()
+  }, [])
+
+  const loadProjects = async () => {
+    try {
+      setLoading(true)
+      const items = await projectService.getAll()
+      setProjects(items)
+    } catch (error: any) {
+      console.error('Load projects error:', error)
+      message.error(error.response?.data?.message || '加载项目失败')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredProjects = projects.filter(project => {
     const matchSearch = project.name.toLowerCase().includes(searchText.toLowerCase()) ||
-                       project.description.toLowerCase().includes(searchText.toLowerCase())
+                       (project.description || '').toLowerCase().includes(searchText.toLowerCase())
     const matchStatus = filterStatus === 'all' || project.status === filterStatus
     return matchSearch && matchStatus
   })
+
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      planning: '规划中',
+      active: '进行中',
+      completed: '已完成',
+      archived: '已归档',
+    }
+    return statusMap[status] || status
+  }
 
   return (
     <div className="space-y-6">
@@ -75,13 +57,16 @@ const ProjectList = () => {
           <h1 className="text-2xl font-bold text-gray-900">项目列表</h1>
           <p className="text-gray-600 mt-1">管理你的所有项目</p>
         </div>
-        <button className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer">
+        <button
+          onClick={() => navigate('/app/projects/new')}
+          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer"
+        >
           <PlusIcon className="w-5 h-5" />
           新建项目
         </button>
       </div>
 
-      <Card className="rounded-xl border border-gray-200 shadow-sm">
+      <Card loading={loading} className="rounded-xl border border-gray-200 shadow-sm">
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -110,6 +95,7 @@ const ProjectList = () => {
             <div
               key={project.id}
               className="bg-purple-50/50 backdrop-blur-sm rounded-xl p-6 border border-purple-100 shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-1 cursor-pointer group"
+              onClick={() => navigate(`/app/projects/${project.id}`)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -120,7 +106,7 @@ const ProjectList = () => {
                   project.status === 'planning' ? 'bg-blue-100 text-blue-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
-                  {project.statusText}
+                  {getStatusText(project.status)}
                 </span>
               </div>
 
@@ -146,19 +132,17 @@ const ProjectList = () => {
 
               <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
                 <div className="flex items-center gap-1">
-                  <span>任务</span>
-                  <span className="font-medium text-gray-900">
-                    {project.tasks.completed}/{project.tasks.total}
-                  </span>
+                  <span>负责人</span>
+                  <span className="font-medium text-gray-900">{project.owner?.name || '-'}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span>成员</span>
-                  <span className="font-medium text-gray-900">{project.members}</span>
+                  <span>状态</span>
+                  <span className="font-medium text-gray-900">{getStatusText(project.status)}</span>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2 mb-4">
-                {project.tags.map((tag, i) => (
+                {(project.tags || []).map((tag, i) => (
                   <Tag key={i} color="purple" className="m-0">
                     {tag}
                   </Tag>
@@ -167,9 +151,15 @@ const ProjectList = () => {
 
               <div className="pt-4 border-t border-purple-100 flex items-center justify-between">
                 <span className="text-xs text-gray-500">
-                  截止 {project.deadline}
+                  截止 {project.deadline ? new Date(project.deadline).toLocaleDateString('zh-CN') : '-'}
                 </span>
-                <button className="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                <button
+                  className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(`/app/projects/${project.id}`)
+                  }}
+                >
                   查看详情 →
                 </button>
               </div>

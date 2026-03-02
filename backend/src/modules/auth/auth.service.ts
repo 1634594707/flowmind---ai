@@ -23,15 +23,24 @@ export class AuthService {
         avatar: user.avatar,
         role: user.role,
         createdAt: user.createdAt,
+        twoFactorEnabled: user.twoFactorEnabled,
       },
       token,
     };
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
+    const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
-      throw new UnauthorizedException('邮箱或密码错误');
+      throw new UnauthorizedException('账号不存在');
+    }
+
+    const isPasswordValid = await this.usersService.validatePassword(
+      loginDto.password,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('密码错误');
     }
 
     const token = this.generateToken(user);
@@ -43,6 +52,8 @@ export class AuthService {
         email: user.email,
         avatar: user.avatar,
         role: user.role,
+        createdAt: user.createdAt,
+        twoFactorEnabled: user.twoFactorEnabled,
       },
       token,
     };
@@ -70,5 +81,9 @@ export class AuthService {
 
   async getProfile(userId: string) {
     return this.usersService.findOne(userId);
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    await this.usersService.changePassword(userId, currentPassword, newPassword);
   }
 }

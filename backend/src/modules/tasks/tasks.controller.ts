@@ -8,27 +8,49 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  findAll() {
-    return this.tasksService.findAll();
+  async findAll() {
+    const tasks = await this.tasksService.findAll();
+    return {
+      code: 200,
+      data: tasks,
+    };
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tasksService.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const task = await this.tasksService.findOne(id);
+    return {
+      code: 200,
+      data: task,
+    };
   }
 
   @Post()
-  create(@Body() createTaskDto: any) {
-    return this.tasksService.create(createTaskDto);
+  async create(@Body() createTaskDto: any) {
+    const task = await this.tasksService.create(createTaskDto);
+    return {
+      code: 201,
+      message: '任务创建成功',
+      data: task,
+    };
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTaskDto: any) {
-    return this.tasksService.update(id, updateTaskDto);
+  async update(@Param('id') id: string, @Body() updateTaskDto: any) {
+    const task = await this.tasksService.update(id, updateTaskDto);
+    return {
+      code: 200,
+      message: '任务更新成功',
+      data: task,
+    };
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tasksService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.tasksService.remove(id);
+    return {
+      code: 200,
+      message: '任务删除成功',
+    };
   }
 }

@@ -4,6 +4,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dashboard Table Styling */
+.dashboard-table .ant-table {
+  @apply rounded-xl overflow-hidden;
+}
+
+.dashboard-table .ant-table-thead > tr > th {
+  @apply bg-gray-50 font-semibold text-gray-700 border-b-2 border-gray-200;
+}
+
+.dashboard-table .ant-table-tbody > tr {
+  @apply hover:bg-gray-50 transition-colors duration-200;
+}
+
+.dashboard-table .ant-table-tbody > tr > td {
+  @apply border-b border-gray-100;
+}
+
+.dashboard-table .ant-table-tbody > tr:last-child > td {
+  @apply border-b-0;
+}
+
 :root {
   --color-primary: #7C3AED;
   --color-secondary: #A78BFA;

@@ -8,27 +8,49 @@ export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Get()
-  findAll() {
-    return this.documentsService.findAll();
+  async findAll() {
+    const documents = await this.documentsService.findAll();
+    return {
+      code: 200,
+      data: documents,
+    };
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.documentsService.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const document = await this.documentsService.findOne(id);
+    return {
+      code: 200,
+      data: document,
+    };
   }
 
   @Post()
-  create(@Body() createDocumentDto: any) {
-    return this.documentsService.create(createDocumentDto);
+  async create(@Body() createDocumentDto: any) {
+    const document = await this.documentsService.create(createDocumentDto);
+    return {
+      code: 201,
+      message: '文档创建成功',
+      data: document,
+    };
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDocumentDto: any) {
-    return this.documentsService.update(id, updateDocumentDto);
+  async update(@Param('id') id: string, @Body() updateDocumentDto: any) {
+    const document = await this.documentsService.update(id, updateDocumentDto);
+    return {
+      code: 200,
+      message: '文档更新成功',
+      data: document,
+    };
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.documentsService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.documentsService.remove(id);
+    return {
+      code: 200,
+      message: '文档删除成功',
+    };
   }
 }

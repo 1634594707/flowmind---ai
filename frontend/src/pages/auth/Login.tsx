@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Input, Checkbox, message } from 'antd'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import { authService } from '../../services/auth.service'
 
 const Login = () => {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('zhangsan@flowmind.com')
+  const [password, setPassword] = useState('password123')
   const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -20,12 +21,16 @@ const Login = () => {
 
     setLoading(true)
     
-    // TODO: 实际登录逻辑
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      await authService.login({ email, password })
       message.success('登录成功！')
       navigate('/app/dashboard')
-    }, 1000)
+    } catch (error: any) {
+      console.error('Login error:', error)
+      message.error(error.response?.data?.message || '登录失败，请检查邮箱和密码')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -96,7 +101,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none"
-                placeholder="your@email.com"
+                placeholder="zhangsan@flowmind.com"
               />
             </div>
             
@@ -108,7 +113,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none"
-                placeholder="••••••••"
+                placeholder="password123"
               />
             </div>
             

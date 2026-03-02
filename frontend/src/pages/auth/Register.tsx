@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Input, message } from 'antd'
+import { authService } from '../../services/auth.service'
 
 const Register = () => {
   const navigate = useNavigate()
@@ -28,11 +29,20 @@ const Register = () => {
     setLoading(true)
     
     // TODO: 实际注册逻辑
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      await authService.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
       message.success('注册成功！')
       navigate('/app/dashboard')
-    }, 1000)
+    } catch (error: any) {
+      console.error('Register error:', error)
+      message.error(error.response?.data?.message || '注册失败，请稍后重试')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -21,13 +21,13 @@ async function bootstrap() {
   });
 
   // API 前缀
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api');
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
   
   console.log(`🚀 FlowMind Backend is running on: http://localhost:${port}`);
-  console.log(`📚 API Documentation: http://localhost:${port}/api/v1`);
+  console.log(`📚 API Documentation: http://localhost:${port}/api`);
 }
 
 bootstrap();

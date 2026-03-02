@@ -1,4 +1,6 @@
-import { Card, Progress, Table } from 'antd'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Card, Progress, Table, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
   FolderIcon,
@@ -7,97 +9,102 @@ import {
   ExclamationTriangleIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
-
-interface ProjectType {
-  id: string
-  name: string
-  description: string
-  status: 'active' | 'planning' | 'completed'
-  statusText: string
-  progress: number
-  members: { name: string; avatar: string }[]
-  deadline: string
-}
+import { projectService, type Project } from '../../services/project.service'
+import { dashboardService, type DashboardStats } from '../../services/dashboard.service'
 
 const Dashboard = () => {
-  const stats = [
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [statsData, projectsData] = await Promise.all([
+        dashboardService.getStats(),
+        projectService.getAll(),
+      ])
+      setStats(statsData)
+      setProjects(projectsData.filter(p => p.status === 'active').slice(0, 5))
+    } catch (error) {
+      message.error('加载数据失败')
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const statsCards = stats ? [
     {
       title: '总项目',
-      value: '24',
+      value: stats.totalProjects.toString(),
       change: '+12%',
       trend: 'up' as const,
       icon: FolderIcon,
-      color: 'blue',
+      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+      borderColor: 'border-blue-100',
     },
     {
       title: '进行中',
-      value: '8',
+      value: stats.activeProjects.toString(),
       change: '+3',
       trend: 'up' as const,
       icon: PlayIcon,
-      color: 'purple',
+      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      borderColor: 'border-purple-100',
     },
     {
       title: '已完成',
-      value: '15',
+      value: stats.completedProjects.toString(),
       change: '+5',
       trend: 'up' as const,
       icon: CheckCircleIcon,
-      color: 'green',
+      bgColor: 'bg-green-50',
+      iconColor: 'text-green-600',
+      borderColor: 'border-green-100',
     },
     {
       title: '延期项目',
-      value: '1',
-      change: '-2',
-      trend: 'down' as const,
+      value: stats.overdueProjects.toString(),
+      change: stats.overdueProjects > 0 ? `+${stats.overdueProjects}` : '0',
+      trend: stats.overdueProjects > 0 ? 'up' as const : 'down' as const,
       icon: ExclamationTriangleIcon,
-      color: 'orange',
+      bgColor: 'bg-orange-50',
+      iconColor: 'text-orange-600',
+      borderColor: 'border-orange-100',
     },
-  ]
+  ] : []
 
-  const projects: ProjectType[] = [
-    {
-      id: '1',
-      name: 'FlowMind 平台',
-      description: 'AI 驱动的 SDLC 管理平台',
-      status: 'active',
-      statusText: '进行中',
-      progress: 75,
-      members: [
-        { name: '张三', avatar: '' },
-        { name: '李四', avatar: '' },
-        { name: '王五', avatar: '' },
-      ],
-      deadline: '2026-04-15',
-    },
-    {
-      id: '2',
-      name: '电商系统重构',
-      description: '微服务架构升级',
-      status: 'active',
-      statusText: '进行中',
-      progress: 45,
-      members: [
-        { name: '赵六', avatar: '' },
-        { name: '钱七', avatar: '' },
-      ],
-      deadline: '2026-05-20',
-    },
-  ]
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      planning: '计划中',
+      active: '进行中',
+      completed: '已完成',
+      archived: '已归档',
+    }
+    return statusMap[status] || status
+  }
 
-  const columns: ColumnsType<ProjectType> = [
+  const columns: ColumnsType<Project> = [
     {
       title: '项目名称',
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
-        <div className="flex items-center cursor-pointer">
-          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-            <FolderIcon className="w-5 h-5 text-purple-600" />
+        <div className="flex items-center cursor-pointer group" onClick={() => navigate(`/app/projects/${record.id}`)}>
+          <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow duration-200">
+            <FolderIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">{text}</div>
-            <div className="text-sm text-gray-500">{record.description}</div>
+            <div className="text-sm font-semibold text-gray-900 group-hover:text-purple-600 transition-colors duration-200">{text}</div>
+            <div className="text-sm text-gray-500 mt-0.5">{record.description}</div>
           </div>
         </div>
       ),
@@ -106,13 +113,14 @@ const Dashboard = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status, record) => (
-        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-          status === 'active' ? 'bg-green-100 text-green-800' :
-          status === 'planning' ? 'bg-blue-100 text-blue-800' :
-          'bg-gray-100 text-gray-800'
+      render: (status) => (
+        <span className={`px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+          status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+          status === 'planning' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+          status === 'completed' ? 'bg-gray-50 text-gray-700 border border-gray-200' :
+          'bg-gray-50 text-gray-700 border border-gray-200'
         }`}>
-          {record.statusText}
+          {getStatusText(status)}
         </span>
       ),
     },
@@ -134,24 +142,15 @@ const Dashboard = () => {
       ),
     },
     {
-      title: '成员',
-      dataIndex: 'members',
-      key: 'members',
-      render: (members) => (
-        <div className="flex -space-x-2">
-          {members.slice(0, 3).map((member: any, i: number) => (
-            <div 
-              key={i}
-              className="w-8 h-8 rounded-full border-2 border-white bg-purple-100 flex items-center justify-center text-xs text-purple-600 font-medium"
-            >
-              {member.name[0]}
-            </div>
-          ))}
-          {members.length > 3 && (
-            <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs text-gray-600">
-              +{members.length - 3}
-            </div>
-          )}
+      title: '负责人',
+      dataIndex: 'owner',
+      key: 'owner',
+      render: (owner) => (
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-semibold shadow-sm">
+            {owner?.name?.[0] || '?'}
+          </div>
+          <span className="text-sm text-gray-700">{owner?.name || '未分配'}</span>
         </div>
       ),
     },
@@ -160,18 +159,26 @@ const Dashboard = () => {
       dataIndex: 'deadline',
       key: 'deadline',
       render: (deadline) => (
-        <span className="text-sm text-gray-500">{deadline}</span>
+        <span className="text-sm text-gray-500">
+          {deadline ? new Date(deadline).toLocaleDateString('zh-CN') : '-'}
+        </span>
       ),
     },
     {
       title: '操作',
       key: 'action',
-      render: () => (
+      render: (_, record) => (
         <div className="flex gap-2">
-          <button className="text-purple-600 hover:text-purple-900 text-sm font-medium cursor-pointer">
+          <button 
+            onClick={() => navigate(`/app/projects/${record.id}`)}
+            className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer"
+          >
             查看
           </button>
-          <button className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer">
+          <button 
+            onClick={() => navigate(`/app/projects/${record.id}/edit`)}
+            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer"
+          >
             编辑
           </button>
         </div>
@@ -183,82 +190,54 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">仪表盘</h1>
-          <p className="text-gray-600 mt-1">欢迎回来，这是你的项目概览</p>
+          <h1 className="text-3xl font-bold text-gray-900">仪表盘</h1>
+          <p className="text-gray-600 mt-2 text-base">欢迎回来，这是你的项目概览</p>
         </div>
-        <button className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer">
+        <button 
+          onClick={() => navigate('/app/projects/new')}
+          className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30 hover:scale-105 cursor-pointer"
+        >
           <PlusIcon className="w-5 h-5" />
           新建项目
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {statsCards.map((stat, index) => (
           <Card 
             key={index}
-            className="rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            loading={loading}
+            className={`rounded-2xl border ${stat.borderColor} shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden`}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 bg-${stat.color}-100 rounded-lg flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 ${stat.bgColor} rounded-xl flex items-center justify-center`}>
+                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
               </div>
-              <span className={`text-sm font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${
+                stat.trend === 'up' 
+                  ? 'bg-green-50 text-green-700' 
+                  : 'bg-red-50 text-red-700'
+              }`}>
                 {stat.change}
               </span>
             </div>
-            <h3 className="text-gray-600 text-sm mb-1">{stat.title}</h3>
+            <h3 className="text-gray-600 text-sm font-medium mb-2">{stat.title}</h3>
             <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
           </Card>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card 
-          title="项目进度" 
-          className="rounded-xl border border-gray-200 shadow-sm"
-        >
-          <div className="h-64 flex items-center justify-center text-gray-400">
-            燃尽图占位
-          </div>
-        </Card>
-        
-        <Card 
-          title="最近活动" 
-          className="rounded-xl border border-gray-200 shadow-sm"
-        >
-          <div className="space-y-4">
-            {[
-              { user: '张三', action: '创建了项目', target: 'FlowMind 平台', time: '2 小时前' },
-              { user: '李四', action: '完成了任务', target: '需求分析文档', time: '5 小时前' },
-              { user: '王五', action: '更新了', target: 'API 设计文档', time: '1 天前' },
-            ].map((activity, i) => (
-              <div key={i} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-xs text-purple-600 font-medium flex-shrink-0">
-                  {activity.user[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">
-                    <span className="font-medium">{activity.user}</span>
-                    {' '}{activity.action}{' '}
-                    <span className="font-medium text-purple-600">{activity.target}</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
       <Card 
         title="我的项目" 
-        className="rounded-xl border border-gray-200 shadow-sm"
+        className="rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
       >
         <Table
           columns={columns}
           dataSource={projects}
           rowKey="id"
+          loading={loading}
           pagination={false}
+          className="dashboard-table"
         />
       </Card>
     </div>

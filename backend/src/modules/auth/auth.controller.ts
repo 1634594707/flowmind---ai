@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -41,7 +42,18 @@ export class AuthController {
         avatar: user.avatar,
         role: user.role,
         createdAt: user.createdAt,
+        twoFactorEnabled: user.twoFactorEnabled,
       },
+    };
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
+    await this.authService.changePassword(req.user.userId, dto.currentPassword, dto.newPassword);
+    return {
+      code: 200,
+      message: '密码修改成功',
     };
   }
 
