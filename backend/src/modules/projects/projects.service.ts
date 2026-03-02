@@ -15,7 +15,7 @@ export class ProjectsService {
       ...createProjectDto,
       ownerId: userId,
     });
-    return await this.projectsRepository.save(project) as Project;
+    return (await this.projectsRepository.save(project)) as unknown as Project;
   }
 
   async findAll(query: any, userId: string) {
@@ -65,7 +65,7 @@ export class ProjectsService {
   async update(id: string, updateProjectDto: any): Promise<Project> {
     const project = await this.findOne(id);
     Object.assign(project, updateProjectDto);
-    return await this.projectsRepository.save(project) as Project;
+    return (await this.projectsRepository.save(project)) as unknown as Project;
   }
 
   async remove(id: string): Promise<void> {

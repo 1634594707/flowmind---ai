@@ -12,7 +12,7 @@ export class TasksService {
 
   async create(createTaskDto: any): Promise<Task> {
     const task = this.tasksRepository.create(createTaskDto);
-    return await this.tasksRepository.save(task) as Task;
+    return (await this.tasksRepository.save(task)) as unknown as Task;
   }
 
   async findAll(): Promise<Task[]> {

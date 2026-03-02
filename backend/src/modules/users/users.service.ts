@@ -17,7 +17,7 @@ export class UsersService {
       ...createUserDto,
       password: hashedPassword,
     });
-    return await this.usersRepository.save(user) as User;
+    return (await this.usersRepository.save(user)) as unknown as User;
   }
 
   async findAll(): Promise<User[]> {
@@ -39,7 +39,7 @@ export class UsersService {
   async update(id: string, updateUserDto: any): Promise<User> {
     const user = await this.findOne(id);
     Object.assign(user, updateUserDto);
-    return await this.usersRepository.save(user) as User;
+    return (await this.usersRepository.save(user)) as unknown as User;
   }
 
   async remove(id: string): Promise<void> {
