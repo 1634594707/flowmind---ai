@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { documentService, type Document } from '../../services/document.service'
 import { projectService, type Project } from '../../services/project.service'
+import DocumentEditorModal from '@/components/documents/DocumentEditorModal'
 
 const Documents = () => {
   const [projectsLoading, setProjectsLoading] = useState(false)
@@ -17,6 +18,9 @@ const Documents = () => {
 
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [documents, setDocuments] = useState<Document[]>([])
+
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string>('')
 
   const projectName = useMemo(() => {
     return projects.find((p) => p.id === projectId)?.name || ''
@@ -110,9 +114,15 @@ const Documents = () => {
     {
       title: '操作',
       key: 'action',
-      render: () => (
+      render: (_, record) => (
         <div className="flex gap-2">
-          <button className="text-purple-600 hover:text-purple-900 text-sm font-medium cursor-pointer">
+          <button
+            className="text-purple-600 hover:text-purple-900 text-sm font-medium cursor-pointer"
+            onClick={() => {
+              setSelectedDocumentId(record.id)
+              setEditorOpen(true)
+            }}
+          >
             查看
           </button>
           <button className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer">
@@ -180,6 +190,18 @@ const Documents = () => {
           />
         )}
       </Card>
+
+      <DocumentEditorModal
+        open={editorOpen}
+        documentId={selectedDocumentId}
+        onClose={() => {
+          setEditorOpen(false)
+          setSelectedDocumentId('')
+        }}
+        onSaved={() => {
+          void loadDocuments()
+        }}
+      />
     </div>
   )
 }

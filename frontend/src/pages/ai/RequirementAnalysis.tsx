@@ -6,6 +6,7 @@ import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { aiService, type RequirementMessage, type RequirementSession } from '../../services/ai.service'
 import { projectService, type Project } from '../../services/project.service'
+import DocumentEditorModal from '@/components/documents/DocumentEditorModal'
 
 const { TextArea } = Input
 const { Text } = Typography
@@ -33,6 +34,8 @@ const RequirementAnalysis = () => {
   const [generating, setGenerating] = useState(false)
   const [prdContent, setPrdContent] = useState('')
   const [prdDocumentId, setPrdDocumentId] = useState<string>('')
+
+  const [prdEditorOpen, setPrdEditorOpen] = useState(false)
 
   const projectName = useMemo(() => {
     return projects.find((p) => p.id === projectId)?.name || ''
@@ -439,11 +442,19 @@ const RequirementAnalysis = () => {
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="text-lg font-semibold text-gray-900">PRD 输出</div>
-          {prdDocumentId ? (
-            <div className="text-sm text-gray-500">
-              Document ID: <Text copyable={{ text: prdDocumentId }}>{formatShortId(prdDocumentId)}</Text>
-            </div>
-          ) : null}
+          <div className="flex items-center gap-3">
+            {prdDocumentId ? (
+              <div className="text-sm text-gray-500">
+                Document ID: <Text copyable={{ text: prdDocumentId }}>{formatShortId(prdDocumentId)}</Text>
+              </div>
+            ) : null}
+            <Button
+              onClick={() => setPrdEditorOpen(true)}
+              disabled={!prdDocumentId}
+            >
+              编辑 PRD
+            </Button>
+          </div>
         </div>
 
         {generating ? (
@@ -462,6 +473,15 @@ const RequirementAnalysis = () => {
           </div>
         )}
       </Card>
+
+      <DocumentEditorModal
+        open={prdEditorOpen}
+        documentId={prdDocumentId}
+        onClose={() => setPrdEditorOpen(false)}
+        onSaved={(doc) => {
+          setPrdContent(doc.content)
+        }}
+      />
     </div>
   )
 }
