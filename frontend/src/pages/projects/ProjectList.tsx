@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Input, Select, Tag, message } from 'antd'
+import { Card, Input, Select, Tag, message, Pagination } from 'antd'
 import { 
   FolderIcon, 
   MagnifyingGlassIcon,
@@ -15,30 +15,43 @@ const ProjectList = () => {
 
   const [loading, setLoading] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
+  const [total, setTotal] = useState(0)
 
-  useEffect(() => {
-    void loadProjects()
-  }, [])
+  const queryStatus = filterStatus === 'all' ? undefined : (filterStatus as Project['status'])
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setLoading(true)
-      const items = await projectService.getAll()
-      setProjects(items)
-    } catch (error: any) {
+      const result = await projectService.getAll({
+        page,
+        limit: pageSize,
+        status: queryStatus,
+        search: searchText || undefined,
+      })
+      setProjects(result.items)
+      setTotal(result.pagination.total)
+    } catch (error: unknown) {
       console.error('Load projects error:', error)
-      message.error(error.response?.data?.message || '加载项目失败')
+      const err = error as { response?: { data?: { message?: string } } }
+      message.error(err.response?.data?.message || '加载项目失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, pageSize, queryStatus, searchText])
 
-  const filteredProjects = projects.filter(project => {
-    const matchSearch = project.name.toLowerCase().includes(searchText.toLowerCase()) ||
-                       (project.description || '').toLowerCase().includes(searchText.toLowerCase())
-    const matchStatus = filterStatus === 'all' || project.status === filterStatus
-    return matchSearch && matchStatus
-  })
+  useEffect(() => {
+    void loadProjects()
+  }, [loadProjects])
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setPage(1)
+      void loadProjects()
+    }, 300)
+    return () => window.clearTimeout(handle)
+  }, [loadProjects, searchText])
 
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
@@ -79,7 +92,10 @@ const ProjectList = () => {
           </div>
           <Select
             value={filterStatus}
-            onChange={setFilterStatus}
+            onChange={(v) => {
+              setFilterStatus(v)
+              setPage(1)
+            }}
             className="w-full md:w-48"
             options={[
               { value: 'all', label: '全部状态' },
@@ -91,7 +107,7 @@ const ProjectList = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
+          {projects.map((project) => (
             <div
               key={project.id}
               className="bg-purple-50/50 backdrop-blur-sm rounded-xl p-6 border border-purple-100 shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-1 cursor-pointer group"
@@ -167,7 +183,24 @@ const ProjectList = () => {
           ))}
         </div>
 
-        {filteredProjects.length === 0 && (
+        <div className="flex items-center justify-end mt-6">
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={total}
+            showSizeChanger
+            showQuickJumper
+            onChange={(nextPage, nextSize) => {
+              setPage(nextPage)
+              if (nextSize && nextSize !== pageSize) {
+                setPageSize(nextSize)
+                setPage(1)
+              }
+            }}
+          />
+        </div>
+
+        {projects.length === 0 && (
           <div className="text-center py-12">
             <FolderIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">

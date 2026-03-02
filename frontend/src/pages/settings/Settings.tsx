@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, Form, Input, Button, Switch, Select, Modal, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { UserIcon, BellIcon, ShieldCheckIcon, PaintBrushIcon } from '@heroicons/react/24/outline'
+import type { AxiosError } from 'axios'
 import { authService } from '../../services/auth.service'
 
 const Settings = () => {
@@ -25,7 +26,7 @@ const Settings = () => {
     }
   }, [form])
 
-  const handleSave = async (values: any) => {
+  const handleSave = async (values: { name?: string; email?: string }) => {
     setSaving(true)
     try {
       await authService.updateProfile({
@@ -33,9 +34,10 @@ const Settings = () => {
         email: values.email,
       })
       message.success('保存成功')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Update profile error:', error)
-      message.error(error.response?.data?.message || '保存失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '保存失败，请稍后重试')
     } finally {
       setSaving(false)
     }
@@ -48,10 +50,11 @@ const Settings = () => {
       const next = await authService.setTwoFactorEnabled(enabled)
       setTwoFactorEnabled(next)
       message.success(next ? '两步验证已启用' : '两步验证已关闭')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Update 2FA error:', error)
       setTwoFactorEnabled(prev)
-      message.error(error.response?.data?.message || '操作失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '操作失败，请稍后重试')
     }
   }
 
@@ -63,12 +66,14 @@ const Settings = () => {
       message.success('密码修改成功')
       setPasswordModalOpen(false)
       passwordForm.resetFields()
-    } catch (error: any) {
-      if (error?.errorFields) {
+    } catch (error: unknown) {
+      const maybeFormError = error as { errorFields?: unknown }
+      if (maybeFormError?.errorFields) {
         return
       }
       console.error('Change password error:', error)
-      message.error(error.response?.data?.message || '修改密码失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '修改密码失败，请稍后重试')
     } finally {
       setChangingPassword(false)
     }
@@ -79,9 +84,10 @@ const Settings = () => {
       await authService.logout()
       message.success('已退出登录')
       navigate('/login')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Logout error:', error)
-      message.error(error.response?.data?.message || '退出失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '退出失败，请稍后重试')
     }
   }
 

@@ -14,7 +14,7 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const user = await this.usersService.create(registerDto);
     const token = this.generateToken(user);
-    
+
     return {
       user: {
         id: user.id,
@@ -44,7 +44,7 @@ export class AuthService {
     }
 
     const token = this.generateToken(user);
-    
+
     return {
       user: {
         id: user.id,
@@ -70,7 +70,8 @@ export class AuthService {
       return null;
     }
 
-    const { password: _, ...result } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...result } = user;
     return result;
   }
 
@@ -83,7 +84,11 @@ export class AuthService {
     return this.usersService.findOne(userId);
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     await this.usersService.changePassword(userId, currentPassword, newPassword);
   }
 }

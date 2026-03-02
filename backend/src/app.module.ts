@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
@@ -7,6 +8,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -14,6 +16,29 @@ import { DocumentsModule } from './modules/documents/documents.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL', '');
+
+        if (!redisUrl) {
+          return {
+            ttl: 30_000,
+          };
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const redisStore = require('cache-manager-redis-store');
+
+        return {
+          store: redisStore,
+          url: redisUrl,
+          ttl: 30_000,
+        };
+      },
     }),
 
     // 数据库模块
@@ -40,6 +65,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
     DashboardModule,
     TasksModule,
     DocumentsModule,
+    AiModule,
   ],
 })
 export class AppModule {}

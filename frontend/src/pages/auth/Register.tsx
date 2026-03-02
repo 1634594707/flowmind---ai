@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Input, message } from 'antd'
+import type { AxiosError } from 'axios'
 import { authService } from '../../services/auth.service'
 
 const Register = () => {
@@ -37,9 +38,10 @@ const Register = () => {
       })
       message.success('注册成功！')
       navigate('/app/dashboard')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Register error:', error)
-      message.error(error.response?.data?.message || '注册失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '注册失败，请稍后重试')
     } finally {
       setLoading(false)
     }

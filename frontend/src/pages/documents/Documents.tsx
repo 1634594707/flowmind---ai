@@ -1,45 +1,73 @@
-import { Card, Table, Tag } from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Card, Table, Tag, Select, message, Spin } from 'antd'
+import type { AxiosError } from 'axios'
 import type { ColumnsType } from 'antd/es/table'
 import {
   DocumentTextIcon,
   PlusIcon,
   FolderIcon,
 } from '@heroicons/react/24/outline'
-
-interface DocumentType {
-  id: string
-  name: string
-  type: string
-  project: string
-  updatedAt: string
-  size: string
-}
+import { documentService, type Document } from '../../services/document.service'
+import { projectService, type Project } from '../../services/project.service'
 
 const Documents = () => {
-  const documents: DocumentType[] = [
-    {
-      id: '1',
-      name: '需求分析文档.docx',
-      type: 'Word',
-      project: 'FlowMind 平台',
-      updatedAt: '2026-03-01',
-      size: '2.4 MB',
-    },
-    {
-      id: '2',
-      name: 'API 设计规范.pdf',
-      type: 'PDF',
-      project: 'FlowMind 平台',
-      updatedAt: '2026-02-28',
-      size: '1.8 MB',
-    },
-  ]
+  const [projectsLoading, setProjectsLoading] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectId, setProjectId] = useState<string>('')
 
-  const columns: ColumnsType<DocumentType> = [
+  const [documentsLoading, setDocumentsLoading] = useState(false)
+  const [documents, setDocuments] = useState<Document[]>([])
+
+  const projectName = useMemo(() => {
+    return projects.find((p) => p.id === projectId)?.name || ''
+  }, [projects, projectId])
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setProjectsLoading(true)
+      const result = await projectService.getAll({ page: 1, limit: 100 })
+      setProjects(result.items)
+      if (!projectId && result.items.length) {
+        setProjectId(result.items[0].id)
+      }
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '加载项目失败')
+    } finally {
+      setProjectsLoading(false)
+    }
+  }, [projectId])
+
+  const loadDocuments = useCallback(async () => {
+    if (!projectId) {
+      setDocuments([])
+      return
+    }
+    try {
+      setDocumentsLoading(true)
+      const data = await documentService.getByProject(projectId)
+      setDocuments(data)
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '加载文档失败')
+    } finally {
+      setDocumentsLoading(false)
+    }
+  }, [projectId])
+
+  useEffect(() => {
+    void loadProjects()
+  }, [loadProjects])
+
+  useEffect(() => {
+    void loadDocuments()
+  }, [loadDocuments])
+
+  const columns: ColumnsType<Document> = [
     {
       title: '文档名称',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'title',
+      key: 'title',
       render: (text, record) => (
         <div className="flex items-center cursor-pointer">
           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -47,7 +75,7 @@ const Documents = () => {
           </div>
           <div>
             <div className="text-sm font-medium text-gray-900">{text}</div>
-            <div className="text-sm text-gray-500">{record.size}</div>
+            <div className="text-sm text-gray-500">{record.version}</div>
           </div>
         </div>
       ),
@@ -62,12 +90,12 @@ const Documents = () => {
     },
     {
       title: '所属项目',
-      dataIndex: 'project',
-      key: 'project',
-      render: (project) => (
+      dataIndex: 'projectId',
+      key: 'projectId',
+      render: () => (
         <div className="flex items-center gap-2">
           <FolderIcon className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-700">{project}</span>
+          <span className="text-sm text-gray-700">{projectName || '-'}</span>
         </div>
       ),
     },
@@ -76,7 +104,7 @@ const Documents = () => {
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       render: (date) => (
-        <span className="text-sm text-gray-500">{date}</span>
+        <span className="text-sm text-gray-500">{new Date(date).toLocaleString()}</span>
       ),
     },
     {
@@ -109,16 +137,48 @@ const Documents = () => {
       </div>
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
-        <Table
-          columns={columns}
-          dataSource={documents}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 个文档`,
-          }}
-        />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600">选择项目</div>
+            <Select
+              className="min-w-[260px]"
+              value={projectId || undefined}
+              loading={projectsLoading}
+              onChange={(v) => setProjectId(v)}
+              options={projects.map((p) => ({ value: p.id, label: p.name }))}
+              placeholder="请选择项目"
+              showSearch
+              optionFilterProp="label"
+            />
+          </div>
+
+          <button
+            className="text-purple-600 hover:text-purple-900 text-sm font-medium cursor-pointer"
+            onClick={() => void loadDocuments()}
+            disabled={documentsLoading || !projectId}
+          >
+            刷新
+          </button>
+        </div>
+      </Card>
+
+      <Card className="rounded-xl border border-gray-200 shadow-sm">
+        {documentsLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <Spin />
+          </div>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={documents}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 个文档`,
+            }}
+          />
+        )}
       </Card>
     </div>
   )

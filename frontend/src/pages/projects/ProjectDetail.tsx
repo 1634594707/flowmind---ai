@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, Button, Tag, Progress, message, Spin } from 'antd'
+import type { AxiosError } from 'axios'
 import { projectService, type Project } from '../../services/project.service'
 
 const ProjectDetail = () => {
@@ -21,9 +22,10 @@ const ProjectDetail = () => {
       setLoading(true)
       const data = await projectService.getById(projectId)
       setProject(data)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Load project error:', error)
-      message.error(error.response?.data?.message || '加载项目失败')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '加载项目失败')
     } finally {
       setLoading(false)
     }

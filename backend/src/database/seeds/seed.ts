@@ -11,7 +11,7 @@ export async function seedDatabase(dataSource: DataSource) {
   // 清理现有数据（按依赖顺序）
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
-  
+
   try {
     await queryRunner.query('TRUNCATE TABLE documents CASCADE');
     await queryRunner.query('TRUNCATE TABLE tasks CASCADE');

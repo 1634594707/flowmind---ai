@@ -7,7 +7,7 @@ export class DashboardService {
 
   async getStats(userId: string) {
     const stats = await this.projectsService.getStats(userId);
-    
+
     return {
       totalProjects: stats.total,
       activeProjects: stats.active,

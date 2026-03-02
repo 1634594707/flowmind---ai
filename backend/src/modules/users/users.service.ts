@@ -66,7 +66,11 @@ export class UsersService {
     return (await this.usersRepository.save(user)) as unknown as User;
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     const user = await this.findOne(userId);
     const isPasswordValid = await this.validatePassword(currentPassword, user.password);
     if (!isPasswordValid) {

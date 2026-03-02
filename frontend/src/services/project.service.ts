@@ -32,10 +32,31 @@ export interface UpdateProjectDto extends Partial<CreateProjectDto> {
   progress?: number;
 }
 
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ProjectListResponse {
+  items: Project[];
+  pagination: Pagination;
+}
+
+export interface GetProjectsQuery {
+  page?: number;
+  limit?: number;
+  status?: 'planning' | 'active' | 'completed' | 'archived';
+  search?: string;
+}
+
 export const projectService = {
-  async getAll(): Promise<Project[]> {
-    const response = await api.get<{ code: number; data: { items: Project[] } }>('/projects');
-    return response.data.data.items;
+  async getAll(query?: GetProjectsQuery): Promise<ProjectListResponse> {
+    const response = await api.get<{ code: number; data: ProjectListResponse }>('/projects', {
+      params: query,
+    });
+    return response.data.data;
   },
 
   async getById(id: string): Promise<Project> {

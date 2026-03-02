@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, Form, Input, Button, Select, InputNumber, DatePicker, message, Spin } from 'antd'
 import dayjs from 'dayjs'
+import type { AxiosError } from 'axios'
 import { projectService, type Project, type CreateProjectDto, type UpdateProjectDto } from '../../services/project.service'
 
 const ProjectEdit = () => {
@@ -12,35 +13,39 @@ const ProjectEdit = () => {
   const [saving, setSaving] = useState(false)
   const [project, setProject] = useState<Project | null>(null)
 
+  const loadProject = useCallback(
+    async (projectId: string) => {
+      try {
+        setLoading(true)
+        const data = await projectService.getById(projectId)
+        setProject(data)
+        form.setFieldsValue({
+          name: data.name,
+          description: data.description,
+          status: data.status,
+          progress: data.progress,
+          startDate: data.startDate ? dayjs(data.startDate) : null,
+          deadline: data.deadline ? dayjs(data.deadline) : null,
+          tags: data.tags || [],
+        })
+      } catch (error: unknown) {
+        console.error('Load project error:', error)
+        const err = error as AxiosError<{ message?: string }>
+        message.error(err.response?.data?.message || '加载项目失败')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [form],
+  )
+
   useEffect(() => {
     if (!id) {
       setLoading(false)
       return
     }
     void loadProject(id)
-  }, [id])
-
-  const loadProject = async (projectId: string) => {
-    try {
-      setLoading(true)
-      const data = await projectService.getById(projectId)
-      setProject(data)
-      form.setFieldsValue({
-        name: data.name,
-        description: data.description,
-        status: data.status,
-        progress: data.progress,
-        startDate: data.startDate ? dayjs(data.startDate) : null,
-        deadline: data.deadline ? dayjs(data.deadline) : null,
-        tags: data.tags || [],
-      })
-    } catch (error: any) {
-      console.error('Load project error:', error)
-      message.error(error.response?.data?.message || '加载项目失败')
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [id, loadProject])
 
   const handleSave = async () => {
     try {
@@ -75,12 +80,14 @@ const ProjectEdit = () => {
         message.success('项目创建成功')
         navigate(`/app/projects/${created.id}`)
       }
-    } catch (error: any) {
-      if (error?.errorFields) {
+    } catch (error: unknown) {
+      const maybeFormError = error as { errorFields?: unknown }
+      if (maybeFormError?.errorFields) {
         return
       }
       console.error('Update project error:', error)
-      message.error(error.response?.data?.message || '保存失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '保存失败，请稍后重试')
     } finally {
       setSaving(false)
     }

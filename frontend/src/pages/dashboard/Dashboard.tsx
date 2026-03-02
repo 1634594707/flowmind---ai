@@ -30,7 +30,7 @@ const Dashboard = () => {
         projectService.getAll(),
       ])
       setStats(statsData)
-      setProjects(projectsData.filter(p => p.status === 'active').slice(0, 5))
+      setProjects(projectsData.items.filter(p => p.status === 'active').slice(0, 5))
     } catch (error) {
       message.error('加载数据失败')
       console.error(error)

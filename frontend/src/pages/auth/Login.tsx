@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Input, Checkbox, message } from 'antd'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import type { AxiosError } from 'axios'
 import { authService } from '../../services/auth.service'
 
 const Login = () => {
@@ -25,9 +26,10 @@ const Login = () => {
       await authService.login({ email, password })
       message.success('登录成功！')
       navigate('/app/dashboard')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error)
-      message.error(error.response?.data?.message || '登录失败，请检查邮箱和密码')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '登录失败，请检查邮箱和密码')
     } finally {
       setLoading(false)
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu, Drawer, List, Button, Dropdown, message } from 'antd'
+import type { AxiosError } from 'axios'
 import {
   HomeIcon,
   FolderIcon,
@@ -8,6 +9,7 @@ import {
   Cog6ToothIcon,
   BellIcon,
   MagnifyingGlassIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { authService, User } from '../../services/auth.service'
 
@@ -41,9 +43,10 @@ const MainLayout = () => {
       await authService.logout()
       message.success('已退出登录')
       navigate('/login')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Logout error:', error)
-      message.error(error.response?.data?.message || '退出失败，请稍后重试')
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '退出失败，请稍后重试')
     }
   }
 
@@ -57,6 +60,11 @@ const MainLayout = () => {
       key: '/app/projects',
       icon: <FolderIcon className="w-5 h-5" />,
       label: '项目',
+    },
+    {
+      key: '/app/ai/requirement',
+      icon: <SparklesIcon className="w-5 h-5" />,
+      label: 'AI 需求分析',
     },
     {
       key: '/app/documents',
