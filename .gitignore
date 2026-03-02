@@ -56,3 +56,6 @@ temp/
 # OS
 Thumbs.db
 .DS_Store
+
+# Exclude specific directories
+ui-ux-pro-max-skill/
