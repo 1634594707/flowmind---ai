@@ -7,10 +7,9 @@
 **像 GPS 导航一样做软件项目——知道你在哪里，该往哪走，如何到达**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0--alpha-orange.svg)](https://github.com/flowmind/flowmind)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Version](https://img.shields.io/badge/version-1.0.0--alpha-orange.svg)](#)
 
-[English](README_EN.md) | 简体中文
+简体中文
 
 </div>
 
@@ -106,12 +105,12 @@ AI: "你想解决什么业务问题？"
 
 **技术栈**:
 - 前端: React 18 + TypeScript + Vite + Ant Design
-- 后端: NestJS + FastAPI
+- 后端: NestJS
 - 数据库: PostgreSQL 15 + Redis 7
-- AI: LangChain + OpenAI API / DeepSeek
+- AI: OpenAI 兼容接口（当前使用 DeepSeek）
 - 基础设施: Kubernetes + Docker
 
-详细架构请查看 [ARCHITECTURE.md](ARCHITECTURE.md)
+当前仓库以 **NestJS + React** 为主，其他模块会在后续逐步补齐。
 
 ---
 
@@ -134,11 +133,10 @@ cd flowmind
 
 # 2. 安装依赖
 npm install
-cd backend && pip install -r requirements.txt
 
 # 3. 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，填入必要配置
+cp backend/.env.example backend/.env
+# 如有需要，可参考 frontend/.env.example
 
 # 4. 启动数据库
 docker-compose up -d postgres redis
@@ -146,9 +144,13 @@ docker-compose up -d postgres redis
 # 5. 数据库迁移
 npm run db:migrate
 
+# (可选) 初始化种子数据
+npm run db:seed
+
 # 6. 启动开发服务器
-npm run dev          # 前端 (http://localhost:5173)
-npm run dev:backend  # 后端 (http://localhost:3000)
+npm run dev
+# 前端: http://localhost:5173
+# 后端: http://localhost:3000
 ```
 
 #### 可选配置：DeepSeek（LLM 推理）
@@ -174,6 +176,16 @@ DEEPSEEK_MODEL=deepseek-chat
 REDIS_URL=redis://localhost:6379
 ```
 
+#### 常见问题
+
+1) 后端报错 `Missing DEEPSEEK_API_KEY`
+
+请确认已在 `backend/.env` 配置 `DEEPSEEK_API_KEY`。
+
+2) 端口占用 `EADDRINUSE`
+
+确认本机 `3000`（后端）或 `5173`（前端）端口未被其他进程占用。
+
 ### Docker 部署
 
 ```bash
@@ -188,12 +200,8 @@ open http://localhost:8080
 
 ## 📚 文档
 
-- [产品需求文档 (PRD)](design.md)
-- [技术架构文档](ARCHITECTURE.md)
 - [项目实施计划](PROJECT_PLAN.md)
-- [API 文档](docs/API.md) (开发中)
-- [用户手册](docs/USER_GUIDE.md) (开发中)
-- [开发者指南](docs/DEVELOPER_GUIDE.md) (开发中)
+- [项目文件结构](PROJECT_STRUCTURE.md)
 
 ---
 
@@ -202,9 +210,9 @@ open http://localhost:8080
 ### ✅ Phase 1: MVP (2026 Q1)
 - [x] 基础架构搭建
 - [x] 用户认证系统
-- [ ] 项目管理核心功能
-- [ ] AI 需求分析助手
-- [ ] PRD 文档生成
+- [x] 项目管理核心功能
+- [x] AI 需求分析助手（DeepSeek）
+- [x] PRD 文档生成并保存为文档
 
 ### 🚧 Phase 2: Beta (2026 Q2)
 - [ ] 设计助手模块
@@ -226,6 +234,20 @@ open http://localhost:8080
 - [ ] 开放平台与插件市场
 
 详细计划请查看 [PROJECT_PLAN.md](PROJECT_PLAN.md)
+
+---
+
+## 🔎 关键功能入口（方便继续迭代）
+
+前端页面：
+- `/app/ai/requirement`：AI 需求分析（会话列表、聊天、PRD 生成、Markdown 渲染）
+- `/app/documents`：文档列表（支持按项目筛选）
+- `/app/projects`：项目列表
+
+后端模块：
+- `backend/src/modules/ai/*`：LLM 接入、会话、消息、PRD 生成
+- `backend/src/modules/documents/*`：文档 CRUD（按用户/项目过滤）
+- `backend/src/modules/projects/*`：项目管理与统计
 
 ---
 
