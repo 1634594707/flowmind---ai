@@ -12,7 +12,7 @@ export class DocumentsService {
 
   async create(createDocumentDto: any): Promise<Document> {
     const document = this.documentsRepository.create(createDocumentDto);
-    return this.documentsRepository.save(document);
+    return await this.documentsRepository.save(document) as Document;
   }
 
   async findAll(): Promise<Document[]> {
