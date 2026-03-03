@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import App from './App'
+import { initPerfMetrics } from './utils/perf'
 import './index.css'
 import 'antd/dist/reset.css'
 
@@ -32,6 +33,8 @@ const theme = {
     },
   },
 }
+
+initPerfMetrics()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

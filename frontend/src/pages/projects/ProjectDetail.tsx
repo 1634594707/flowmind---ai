@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, Button, Tag, Progress, message, Spin } from 'antd'
+import { Card, Button, Tag, Progress, message } from 'antd'
 import type { AxiosError } from 'axios'
 import { projectService, type Project } from '../../services/project.service'
+import { LoadingBlock, PageHeader } from '@/components/ui'
 
 const ProjectDetail = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const [loading, setLoading] = useState(true)
+  const [transitioning, setTransitioning] = useState(false)
   const [project, setProject] = useState<Project | null>(null)
 
   useEffect(() => {
@@ -33,9 +35,7 @@ const ProjectDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Spin />
-      </div>
+      <LoadingBlock className="flex items-center justify-center py-16" />
     )
   }
 
@@ -59,20 +59,55 @@ const ProjectDetail = () => {
     archived: '已归档',
   }
 
+  const stageText: Record<string, string> = {
+    requirements: '需求',
+    design: '设计',
+    development: '开发',
+    testing: '测试',
+    release: '发布',
+  }
+
+  const agileStages = ['requirements', 'design', 'development', 'testing', 'release']
+  const currentStage = project?.stage || 'requirements'
+  const nextStage = (() => {
+    const idx = agileStages.indexOf(currentStage)
+    if (idx < 0) {
+      return ''
+    }
+    return idx >= agileStages.length - 1 ? '' : agileStages[idx + 1]
+  })()
+
+  const handleAdvanceStage = async () => {
+    if (!project) {
+      return
+    }
+    try {
+      setTransitioning(true)
+      const updated = await projectService.transitionStage(project.id)
+      setProject(updated)
+      message.success('阶段已推进')
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message?: string }>
+      message.error(err.response?.data?.message || '阶段推进失败')
+    } finally {
+      setTransitioning(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-          <p className="text-gray-600 mt-1">{project.description || '暂无描述'}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => navigate('/app/projects')}>返回</Button>
-          <Button type="primary" className="bg-purple-600 hover:bg-purple-700" onClick={() => navigate(`/app/projects/${project.id}/edit`)}>
-            编辑项目
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={project.name}
+        subtitle={project.description || '暂无描述'}
+        right={
+          <>
+            <Button onClick={() => navigate('/app/projects')}>返回</Button>
+            <Button type="primary" className="bg-purple-600 hover:bg-purple-700" onClick={() => navigate(`/app/projects/${project.id}/edit`)}>
+              编辑项目
+            </Button>
+          </>
+        }
+      />
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         <div className="grid gap-6 md:grid-cols-2">
@@ -81,6 +116,22 @@ const ProjectDetail = () => {
             <Tag color={project.status === 'active' ? 'green' : project.status === 'planning' ? 'blue' : project.status === 'completed' ? 'default' : 'purple'}>
               {statusText[project.status] || project.status}
             </Tag>
+          </div>
+
+          <div>
+            <div className="text-sm text-gray-500 mb-2">阶段 (Agile)</div>
+            <div className="flex items-center justify-between gap-3">
+              <Tag color="purple">{stageText[currentStage] || currentStage}</Tag>
+              <Button
+                type="primary"
+                className="bg-orange-500 hover:bg-orange-600"
+                disabled={!nextStage}
+                loading={transitioning}
+                onClick={() => void handleAdvanceStage()}
+              >
+                {nextStage ? `推进到：${stageText[nextStage] || nextStage}` : '已到最终阶段'}
+              </Button>
+            </div>
           </div>
 
           <div>

@@ -25,4 +25,8 @@ export class CreateProjectDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsIn(['agile'])
+  sdlcTemplate?: string;
 }

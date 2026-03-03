@@ -42,4 +42,8 @@ export class UpdateProjectDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsIn(['agile'])
+  sdlcTemplate?: string;
 }

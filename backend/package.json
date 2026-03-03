@@ -16,6 +16,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "p95": "node scripts/p95-check.mjs",
     "seed": "ts-node src/database/seed-runner.ts",
     "migration:generate": "typeorm migration:generate -d src/config/typeorm.config.ts",
     "migration:run": "typeorm migration:run -d src/config/typeorm.config.ts",
@@ -79,7 +80,16 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.service.ts",
+      "common/**/*.ts",
+      "!**/*.spec.ts",
+      "!**/*.module.ts",
+      "!**/*.controller.ts",
+      "!**/*.entity.ts",
+      "!**/dto/**",
+      "!main.ts",
+      "!app.module.ts",
+      "!database/**"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

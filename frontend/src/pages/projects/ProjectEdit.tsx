@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, Form, Input, Button, Select, InputNumber, DatePicker, message, Spin } from 'antd'
+import { Card, Form, Input, Button, Select, InputNumber, DatePicker, message } from 'antd'
 import dayjs from 'dayjs'
 import type { AxiosError } from 'axios'
 import { projectService, type Project, type CreateProjectDto, type UpdateProjectDto } from '../../services/project.service'
+import { LoadingBlock, PageHeader } from '@/components/ui'
 
 const ProjectEdit = () => {
   const navigate = useNavigate()
@@ -27,6 +28,7 @@ const ProjectEdit = () => {
           startDate: data.startDate ? dayjs(data.startDate) : null,
           deadline: data.deadline ? dayjs(data.deadline) : null,
           tags: data.tags || [],
+          sdlcTemplate: data.sdlcTemplate || 'agile',
         })
       } catch (error: unknown) {
         console.error('Load project error:', error)
@@ -60,6 +62,7 @@ const ProjectEdit = () => {
         startDate: values.startDate ? values.startDate.toISOString() : undefined,
         deadline: values.deadline ? values.deadline.toISOString() : undefined,
         tags: values.tags,
+        sdlcTemplate: values.sdlcTemplate,
       }
 
       if (id) {
@@ -75,6 +78,7 @@ const ProjectEdit = () => {
           startDate: values.startDate ? values.startDate.toISOString() : undefined,
           deadline: values.deadline ? values.deadline.toISOString() : undefined,
           tags: values.tags,
+          sdlcTemplate: values.sdlcTemplate,
         }
         const created = await projectService.create(createPayload)
         message.success('项目创建成功')
@@ -95,9 +99,7 @@ const ProjectEdit = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Spin />
-      </div>
+      <LoadingBlock className="flex items-center justify-center py-16" />
     )
   }
 
@@ -105,21 +107,21 @@ const ProjectEdit = () => {
     if (!id) {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">新建项目</h1>
-              <p className="text-gray-600 mt-1">创建一个新的项目</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button onClick={() => navigate('/app/projects')}>取消</Button>
-              <Button type="primary" className="bg-purple-600 hover:bg-purple-700" loading={saving} onClick={handleSave}>
-                创建
-              </Button>
-            </div>
-          </div>
+          <PageHeader
+            title="新建项目"
+            subtitle="创建一个新的项目"
+            right={
+              <>
+                <Button onClick={() => navigate('/app/projects')}>取消</Button>
+                <Button type="primary" className="bg-purple-600 hover:bg-purple-700" loading={saving} onClick={handleSave}>
+                  创建
+                </Button>
+              </>
+            }
+          />
 
           <Card className="rounded-xl border border-gray-200 shadow-sm">
-            <Form form={form} layout="vertical" initialValues={{ status: 'planning', progress: 0, tags: [] }}>
+            <Form form={form} layout="vertical" initialValues={{ status: 'planning', progress: 0, tags: [], sdlcTemplate: 'agile' }}>
               <div className="grid gap-6 md:grid-cols-2">
                 <Form.Item label="项目名称" name="name" rules={[{ required: true, message: '请输入项目名称' }]}>
                   <Input placeholder="请输入项目名称" />
@@ -132,6 +134,14 @@ const ProjectEdit = () => {
                       { value: 'active', label: '进行中' },
                       { value: 'completed', label: '已完成' },
                       { value: 'archived', label: '已归档' },
+                    ]}
+                  />
+                </Form.Item>
+
+                <Form.Item label="SDLC 模板" name="sdlcTemplate" rules={[{ required: true, message: '请选择 SDLC 模板' }]}>
+                  <Select
+                    options={[
+                      { value: 'agile', label: '敏捷开发 (Agile)' },
                     ]}
                   />
                 </Form.Item>
@@ -176,18 +186,18 @@ const ProjectEdit = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">编辑项目</h1>
-          <p className="text-gray-600 mt-1">{project.name}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => navigate(`/app/projects/${project.id}`)}>取消</Button>
-          <Button type="primary" className="bg-purple-600 hover:bg-purple-700" loading={saving} onClick={handleSave}>
-            保存
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="编辑项目"
+        subtitle={project.name}
+        right={
+          <>
+            <Button onClick={() => navigate(`/app/projects/${project.id}`)}>取消</Button>
+            <Button type="primary" className="bg-purple-600 hover:bg-purple-700" loading={saving} onClick={handleSave}>
+              保存
+            </Button>
+          </>
+        }
+      />
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         <Form form={form} layout="vertical">
@@ -203,6 +213,14 @@ const ProjectEdit = () => {
                   { value: 'active', label: '进行中' },
                   { value: 'completed', label: '已完成' },
                   { value: 'archived', label: '已归档' },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item label="SDLC 模板" name="sdlcTemplate" rules={[{ required: true, message: '请选择 SDLC 模板' }]}>
+              <Select
+                options={[
+                  { value: 'agile', label: '敏捷开发 (Agile)' },
                 ]}
               />
             </Form.Item>

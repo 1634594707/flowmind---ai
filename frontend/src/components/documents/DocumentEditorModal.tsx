@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Modal, Tabs, Input, Spin, Button, message } from 'antd'
+import { Modal, Tabs, Input, Button, message } from 'antd'
 import type { TabsProps } from 'antd'
 import type { AxiosError } from 'axios'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { documentService, type Document } from '@/services/document.service'
+import { LoadingBlock } from '@/components/ui'
 
 interface Props {
   open: boolean
@@ -162,9 +163,7 @@ const DocumentEditorModal = ({ open, documentId, onClose, onSaved }: Props) => {
       destroyOnClose
     >
       {loading ? (
-        <div className="flex items-center justify-center py-10">
-          <Spin />
-        </div>
+        <LoadingBlock />
       ) : (
         <Tabs defaultActiveKey="edit" items={items} />
       )}

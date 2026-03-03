@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint (frontend)
+        run: npm -w frontend run lint --if-present
+
+      - name: Lint (backend)
+        run: npm -w backend exec -- eslint "{src,apps,libs,test}/**/*.ts"
+
+      - name: Test
+        run: |
+          npm -w frontend run test --if-present
+          npm -w backend run test --if-present
+
+      - name: Build
+        run: npm run build

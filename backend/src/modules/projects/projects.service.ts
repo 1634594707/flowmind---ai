@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Project } from './entities/project.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
+
+const AGILE_STAGES = ['requirements', 'design', 'development', 'testing', 'release'] as const;
+type AgileStage = (typeof AGILE_STAGES)[number];
 
 @Injectable()
 export class ProjectsService {
@@ -70,6 +73,42 @@ export class ProjectsService {
   async update(id: string, updateProjectDto: UpdateProjectDto, userId: string): Promise<Project> {
     const project = await this.findOneForUser(id, userId);
     Object.assign(project, updateProjectDto);
+    return (await this.projectsRepository.save(project)) as unknown as Project;
+  }
+
+  private getNextAgileStage(stage: string): AgileStage | null {
+    const idx = AGILE_STAGES.indexOf(stage as AgileStage);
+    if (idx < 0) {
+      return null;
+    }
+    return idx >= AGILE_STAGES.length - 1 ? null : AGILE_STAGES[idx + 1];
+  }
+
+  async transitionStage(id: string, userId: string, toStage?: string): Promise<Project> {
+    const project = await this.findOneForUser(id, userId);
+
+    if (project.sdlcTemplate !== 'agile') {
+      throw new BadRequestException('Unsupported SDLC template');
+    }
+
+    const current = project.stage || 'requirements';
+    const next = this.getNextAgileStage(current);
+
+    if (toStage) {
+      if (!AGILE_STAGES.includes(toStage as AgileStage)) {
+        throw new BadRequestException('Invalid stage');
+      }
+      if (toStage !== next) {
+        throw new BadRequestException(`Stage transition not allowed: ${current} -> ${toStage}`);
+      }
+      project.stage = toStage;
+    } else {
+      if (!next) {
+        throw new BadRequestException('Already at final stage');
+      }
+      project.stage = next;
+    }
+
     return (await this.projectsRepository.save(project)) as unknown as Project;
   }
 

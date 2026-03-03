@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Card, Input, Button, Select, message, Spin, Typography, Divider, List } from 'antd'
+import { Card, Input, Button, Select, message, Typography, Divider, List } from 'antd'
 import type { AxiosError } from 'axios'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import { aiService, type RequirementMessage, type RequirementSession } from '../../services/ai.service'
 import { projectService, type Project } from '../../services/project.service'
 import DocumentEditorModal from '@/components/documents/DocumentEditorModal'
+import { LoadingBlock, PageHeader } from '@/components/ui'
 
 const { TextArea } = Input
 const { Text } = Typography
@@ -267,10 +268,7 @@ const RequirementAnalysis = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">AI 需求分析</h1>
-        <p className="text-gray-600 mt-1">通过对话澄清需求，并一键生成 PRD</p>
-      </div>
+      <PageHeader title="AI 需求分析" subtitle="通过对话澄清需求，并一键生成 PRD" />
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         <div className="grid gap-4 md:grid-cols-3">
@@ -337,9 +335,7 @@ const RequirementAnalysis = () => {
         </div>
 
         {sessionsLoading ? (
-          <div className="flex items-center justify-center py-6">
-            <Spin />
-          </div>
+          <LoadingBlock className="flex items-center justify-center py-6" />
         ) : sessions.length === 0 ? (
           <div className="text-gray-600">暂无历史会话。你可以先创建一个会话。</div>
         ) : (
@@ -458,9 +454,7 @@ const RequirementAnalysis = () => {
         </div>
 
         {generating ? (
-          <div className="flex items-center justify-center py-10">
-            <Spin />
-          </div>
+          <LoadingBlock />
         ) : (
           <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-[520px] overflow-auto">
             {prdContent ? (

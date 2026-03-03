@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
+import { TransitionProjectStageDto } from './dto/transition-project-stage.dto';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -27,6 +28,20 @@ export class ProjectsController {
     return {
       code: 200,
       data: stats,
+    };
+  }
+
+  @Post(':id/stage/transition')
+  async transitionStage(
+    @Param('id') id: string,
+    @Body() dto: TransitionProjectStageDto,
+    @Request() req,
+  ) {
+    const project = await this.projectsService.transitionStage(id, req.user.userId, dto.toStage);
+    return {
+      code: 200,
+      message: '阶段流转成功',
+      data: project,
     };
   }
 

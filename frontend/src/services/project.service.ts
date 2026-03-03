@@ -9,6 +9,8 @@ export interface Project {
   startDate?: string;
   deadline?: string;
   tags?: string[];
+  sdlcTemplate?: string;
+  stage?: string;
   ownerId: string;
   owner?: {
     id: string;
@@ -26,6 +28,7 @@ export interface CreateProjectDto {
   startDate?: string;
   deadline?: string;
   tags?: string[];
+  sdlcTemplate?: string;
 }
 
 export interface UpdateProjectDto extends Partial<CreateProjectDto> {
@@ -71,6 +74,13 @@ export const projectService = {
 
   async update(id: string, data: UpdateProjectDto): Promise<Project> {
     const response = await api.patch<{ code: number; data: Project }>(`/projects/${id}`, data);
+    return response.data.data;
+  },
+
+  async transitionStage(id: string, toStage?: string): Promise<Project> {
+    const response = await api.post<{ code: number; data: Project }>(`/projects/${id}/stage/transition`, {
+      toStage,
+    });
     return response.data.data;
   },
 

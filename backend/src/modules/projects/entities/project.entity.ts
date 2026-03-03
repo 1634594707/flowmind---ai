@@ -35,6 +35,12 @@ export class Project {
   @Column({ type: 'simple-array', nullable: true })
   tags: string[];
 
+  @Column({ name: 'sdlc_template', default: 'agile' })
+  sdlcTemplate: string;
+
+  @Column({ name: 'sdlc_stage', default: 'requirements' })
+  stage: string;
+
   @Column({ name: 'owner_id' })
   ownerId: string;
 

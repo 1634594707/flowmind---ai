@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, Table, Tag, Select, message, Spin } from 'antd'
+import { Card, Table, Tag, Select, message } from 'antd'
 import type { AxiosError } from 'axios'
 import type { ColumnsType } from 'antd/es/table'
 import {
@@ -10,6 +10,8 @@ import {
 import { documentService, type Document } from '../../services/document.service'
 import { projectService, type Project } from '../../services/project.service'
 import DocumentEditorModal from '@/components/documents/DocumentEditorModal'
+import { LoadingBlock, PageHeader } from '@/components/ui'
+import { exportDocumentAsPdf, exportDocumentAsWord } from '@/utils/documentExport'
 
 const Documents = () => {
   const [projectsLoading, setProjectsLoading] = useState(false)
@@ -18,6 +20,8 @@ const Documents = () => {
 
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [documents, setDocuments] = useState<Document[]>([])
+
+  const [exportingId, setExportingId] = useState<string>('')
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>('')
@@ -125,8 +129,51 @@ const Documents = () => {
           >
             查看
           </button>
-          <button className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer">
-            下载
+          <button
+            className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer"
+            disabled={exportingId === record.id}
+            onClick={() => {
+              const run = async () => {
+                try {
+                  setExportingId(record.id)
+                  const doc = await documentService.getById(record.id)
+                  exportDocumentAsWord(doc.title, doc.content)
+                } catch (error: unknown) {
+                  const err = error as AxiosError<{ message?: string }>
+                  message.error(err.response?.data?.message || '导出 Word 失败')
+                } finally {
+                  setExportingId('')
+                }
+              }
+              void run()
+            }}
+          >
+            下载 Word
+          </button>
+          <button
+            className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer"
+            disabled={exportingId === record.id}
+            onClick={() => {
+              const run = async () => {
+                try {
+                  setExportingId(record.id)
+                  const doc = await documentService.getById(record.id)
+                  exportDocumentAsPdf(doc.title, doc.content)
+                } catch (error: unknown) {
+                  if (error instanceof Error && error.message === 'Popup blocked') {
+                    message.error('浏览器拦截了弹窗，请允许弹窗后重试')
+                    return
+                  }
+                  const err = error as AxiosError<{ message?: string }>
+                  message.error(err.response?.data?.message || '导出 PDF 失败')
+                } finally {
+                  setExportingId('')
+                }
+              }
+              void run()
+            }}
+          >
+            下载 PDF
           </button>
         </div>
       ),
@@ -135,16 +182,16 @@ const Documents = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">文档</h1>
-          <p className="text-gray-600 mt-1">管理项目相关文档</p>
-        </div>
-        <button className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer">
-          <PlusIcon className="w-5 h-5" />
-          上传文档
-        </button>
-      </div>
+      <PageHeader
+        title="文档"
+        subtitle="管理项目相关文档"
+        right={
+          <button className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer">
+            <PlusIcon className="w-5 h-5" />
+            上传文档
+          </button>
+        }
+      />
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -174,9 +221,7 @@ const Documents = () => {
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         {documentsLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <Spin />
-          </div>
+          <LoadingBlock />
         ) : (
           <Table
             columns={columns}
