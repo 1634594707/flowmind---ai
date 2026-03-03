@@ -9,14 +9,17 @@ import {
   ExclamationTriangleIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
-import { projectService, type Project } from '../../services/project.service'
-import { dashboardService, type DashboardStats } from '../../services/dashboard.service'
+import {
+  dashboardService,
+  type DashboardProjectOverview,
+  type DashboardStats,
+} from '../../services/dashboard.service'
 
 const Dashboard = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projectOverviews, setProjectOverviews] = useState<DashboardProjectOverview[]>([])
 
   useEffect(() => {
     loadData()
@@ -25,12 +28,12 @@ const Dashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [statsData, projectsData] = await Promise.all([
+      const [statsData, projectsOverviewData] = await Promise.all([
         dashboardService.getStats(),
-        projectService.getAll(),
+        dashboardService.getProjectOverviews(),
       ])
       setStats(statsData)
-      setProjects(projectsData.items.filter(p => p.status === 'active').slice(0, 5))
+      setProjectOverviews((projectsOverviewData.items || []).slice(0, 5))
     } catch (error) {
       message.error('加载数据失败')
       console.error(error)
@@ -92,26 +95,29 @@ const Dashboard = () => {
     return statusMap[status] || status
   }
 
-  const columns: ColumnsType<Project> = [
+  const columns: ColumnsType<DashboardProjectOverview> = [
     {
       title: '项目名称',
-      dataIndex: 'name',
+      dataIndex: ['project', 'name'],
       key: 'name',
       render: (text, record) => (
-        <div className="flex items-center cursor-pointer group" onClick={() => navigate(`/app/projects/${record.id}`)}>
+        <div
+          className="flex items-center cursor-pointer group"
+          onClick={() => navigate(`/app/projects/${record.project.id}`)}
+        >
           <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow duration-200">
             <FolderIcon className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="text-sm font-semibold text-gray-900 group-hover:text-purple-600 transition-colors duration-200">{text}</div>
-            <div className="text-sm text-gray-500 mt-0.5">{record.description}</div>
+            <div className="text-sm text-gray-500 mt-0.5">{record.project.description}</div>
           </div>
         </div>
       ),
     },
     {
       title: '状态',
-      dataIndex: 'status',
+      dataIndex: ['project', 'status'],
       key: 'status',
       render: (status) => (
         <span className={`px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -125,8 +131,24 @@ const Dashboard = () => {
       ),
     },
     {
+      title: 'PRD',
+      dataIndex: 'prd',
+      key: 'prd',
+      render: (prd: DashboardProjectOverview['prd']) => (
+        <span
+          className={`px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+            prd?.exists
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-orange-50 text-orange-700 border border-orange-200'
+          }`}
+        >
+          {prd?.exists ? '已生成' : '未生成'}
+        </span>
+      ),
+    },
+    {
       title: '进度',
-      dataIndex: 'progress',
+      dataIndex: ['project', 'progress'],
       key: 'progress',
       render: (progress) => (
         <div className="flex items-center gap-2">
@@ -142,8 +164,23 @@ const Dashboard = () => {
       ),
     },
     {
+      title: '下一步',
+      dataIndex: 'nextActionHint',
+      key: 'nextActionHint',
+      render: (text: string, record: DashboardProjectOverview) => (
+        <div className="text-sm text-gray-700">
+          <div className="font-medium">{text}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            {(record.recentDocuments || []).length
+              ? `最近文档：${record.recentDocuments[0].title}`
+              : '最近无文档更新'}
+          </div>
+        </div>
+      ),
+    },
+    {
       title: '负责人',
-      dataIndex: 'owner',
+      dataIndex: ['project', 'owner'],
       key: 'owner',
       render: (owner) => (
         <div className="flex items-center gap-2">
@@ -156,7 +193,7 @@ const Dashboard = () => {
     },
     {
       title: '截止日期',
-      dataIndex: 'deadline',
+      dataIndex: ['project', 'deadline'],
       key: 'deadline',
       render: (deadline) => (
         <span className="text-sm text-gray-500">
@@ -170,13 +207,13 @@ const Dashboard = () => {
       render: (_, record) => (
         <div className="flex gap-2">
           <button 
-            onClick={() => navigate(`/app/projects/${record.id}`)}
+            onClick={() => navigate(`/app/projects/${record.project.id}`)}
             className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer"
           >
             查看
           </button>
           <button 
-            onClick={() => navigate(`/app/projects/${record.id}/edit`)}
+            onClick={() => navigate(`/app/projects/${record.project.id}/edit`)}
             className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer"
           >
             编辑
@@ -233,8 +270,8 @@ const Dashboard = () => {
       >
         <Table
           columns={columns}
-          dataSource={projects}
-          rowKey="id"
+          dataSource={projectOverviews}
+          rowKey={(r: any) => r.project.id}
           loading={loading}
           pagination={false}
           className="dashboard-table"

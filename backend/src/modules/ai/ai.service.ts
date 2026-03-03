@@ -8,6 +8,10 @@ import { RequirementMessage } from './entities/requirement-message.entity';
 import { CreateRequirementSessionDto } from './dto/create-requirement-session.dto';
 import { AddRequirementMessageDto } from './dto/add-requirement-message.dto';
 import { GeneratePrdDto } from './dto/generate-prd.dto';
+import { GenerateArchitectureDto } from './dto/generate-architecture.dto';
+import { GenerateApiSpecDto } from './dto/generate-api-spec.dto';
+import { GenerateDatabaseDesignDto } from './dto/generate-database-design.dto';
+import { GenerateTechStackDto } from './dto/generate-tech-stack.dto';
 import { ProjectsService } from '../projects/projects.service';
 import { DocumentsService } from '../documents/documents.service';
 import { LlmService, type LlmChatMessage } from './llm.service';
@@ -27,6 +31,166 @@ export class AiService {
 
   private getSessionsListCacheKey(userId: string, projectId: string) {
     return `ai:sessions:list:${userId}:${projectId}`;
+  }
+
+  private async buildDesignInput(
+    userId: string,
+    projectId: string,
+    opts: { sourceDocumentId?: string; context?: string },
+  ): Promise<string> {
+    const blocks: string[] = [];
+
+    await this.projectsService.findOneForUser(projectId, userId);
+
+    if (opts.sourceDocumentId) {
+      const doc = await this.documentsService.findOneForUser(opts.sourceDocumentId, userId);
+      blocks.push(`## 参考文档：${doc.title}`);
+      blocks.push(doc.content || '');
+    }
+
+    if (opts.context) {
+      blocks.push('## 补充上下文');
+      blocks.push(opts.context);
+    }
+
+    return blocks.join('\n\n').trim();
+  }
+
+  async generateArchitecture(dto: GenerateArchitectureDto, userId: string) {
+    const input = await this.buildDesignInput(userId, dto.projectId, {
+      sourceDocumentId: dto.sourceDocumentId,
+      context: dto.context,
+    });
+
+    const prompt = [
+      '你是资深架构师。请基于输入内容输出一份“架构设计建议”（Markdown）。',
+      '要求：',
+      '- 给出整体架构（模块划分、边界、职责）。',
+      '- 给出关键技术选型建议（前端/后端/数据库/缓存/消息队列等），并说明理由。',
+      '- 给出关键接口/数据流说明。',
+      '- 识别风险点与改进建议。',
+      '- 尽量可落地、条理清晰。',
+      '输出必须为 Markdown，不要输出与内容无关的解释。',
+    ].join('\n');
+
+    const llmMessages: LlmChatMessage[] = [
+      { role: 'system', content: prompt },
+      { role: 'user', content: input },
+    ];
+
+    const content = await this.llmService.chat(llmMessages, { temperature: 0.2 });
+    const document = await this.documentsService.create({
+      title: dto.documentTitle || '架构设计建议',
+      type: 'design',
+      content,
+      version: '1.0',
+      projectId: dto.projectId,
+      authorId: userId,
+    });
+
+    return { document, content };
+  }
+
+  async generateTechStack(dto: GenerateTechStackDto, userId: string) {
+    const input = await this.buildDesignInput(userId, dto.projectId, {
+      sourceDocumentId: dto.sourceDocumentId,
+      context: dto.context,
+    });
+
+    const prompt = [
+      '你是资深技术负责人。请基于输入内容生成“技术选型推荐”（Markdown）。',
+      '要求：',
+      '- 从前端、后端、数据库、缓存、消息队列、搜索、对象存储、监控告警、CI/CD、部署形态等维度给出推荐。',
+      '- 每个选型给出 2-3 个候选方案，并给出推荐方案与理由（成本、团队能力、可维护性、性能、扩展性）。',
+      '- 给出风险点与替代方案。',
+      '- 给出最小可行版本（MVP）与后续演进路径。',
+      '- 输出必须为 Markdown，不要输出与内容无关的解释。',
+    ].join('\n');
+
+    const llmMessages: LlmChatMessage[] = [
+      { role: 'system', content: prompt },
+      { role: 'user', content: input },
+    ];
+
+    const content = await this.llmService.chat(llmMessages, { temperature: 0.2 });
+    const document = await this.documentsService.create({
+      title: dto.documentTitle || '技术选型推荐',
+      type: 'design',
+      content,
+      version: '1.0',
+      projectId: dto.projectId,
+      authorId: userId,
+    });
+
+    return { document, content };
+  }
+
+  async generateApiSpec(dto: GenerateApiSpecDto, userId: string) {
+    const input = await this.buildDesignInput(userId, dto.projectId, {
+      sourceDocumentId: dto.sourceDocumentId,
+      context: dto.context,
+    });
+
+    const prompt = [
+      '你是资深后端工程师与 API 设计专家。请基于输入内容生成“API 接口定义”（Markdown）。',
+      '要求：',
+      '- 输出接口清单（按资源/模块分组）。',
+      '- 每个接口包含：HTTP 方法、路径、用途说明、请求参数（path/query/body）、响应结构、错误码。',
+      '- 给出统一的鉴权方式与通用响应结构约定（如 code/message/data）。',
+      '- 如有分页、排序、过滤等需求请明确字段。',
+      '- 输出必须为 Markdown，不要输出与内容无关的解释。',
+    ].join('\n');
+
+    const llmMessages: LlmChatMessage[] = [
+      { role: 'system', content: prompt },
+      { role: 'user', content: input },
+    ];
+
+    const content = await this.llmService.chat(llmMessages, { temperature: 0.2 });
+    const document = await this.documentsService.create({
+      title: dto.documentTitle || 'API 接口定义',
+      type: 'api',
+      content,
+      version: '1.0',
+      projectId: dto.projectId,
+      authorId: userId,
+    });
+
+    return { document, content };
+  }
+
+  async generateDatabaseDesign(dto: GenerateDatabaseDesignDto, userId: string) {
+    const input = await this.buildDesignInput(userId, dto.projectId, {
+      sourceDocumentId: dto.sourceDocumentId,
+      context: dto.context,
+    });
+
+    const prompt = [
+      '你是资深数据库工程师。请基于输入内容生成“数据库设计建议”（Markdown）。',
+      '要求：',
+      '- 输出表清单（含用途），每张表给出字段（类型/是否必填/默认值）、主键、索引建议。',
+      '- 明确表之间关系（1-1/1-N/N-N）以及外键字段。',
+      '- 给出约束（唯一性、枚举值、软删除字段等）建议。',
+      '- 给出查询性能与扩展性建议（索引、分区、读写分离等，按需要）。',
+      '- 输出必须为 Markdown，不要输出与内容无关的解释。',
+    ].join('\n');
+
+    const llmMessages: LlmChatMessage[] = [
+      { role: 'system', content: prompt },
+      { role: 'user', content: input },
+    ];
+
+    const content = await this.llmService.chat(llmMessages, { temperature: 0.2 });
+    const document = await this.documentsService.create({
+      title: dto.documentTitle || '数据库设计建议',
+      type: 'design',
+      content,
+      version: '1.0',
+      projectId: dto.projectId,
+      authorId: userId,
+    });
+
+    return { document, content };
   }
 
   private getSessionDetailCacheKey(userId: string, sessionId: string) {

@@ -22,6 +22,34 @@ export interface RecentActivity {
   timestamp: string;
 }
 
+export interface DashboardProjectOverview {
+  project: {
+    id: string;
+    name: string;
+    description?: string;
+    status: 'planning' | 'active' | 'completed' | 'archived';
+    progress: number;
+    stage?: string;
+    owner?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    deadline?: string;
+  };
+  prd: {
+    exists: boolean;
+    updatedAt: string | null;
+  };
+  recentDocuments: Array<{
+    id: string;
+    title: string;
+    type: string;
+    updatedAt: string;
+  }>;
+  nextActionHint: string;
+}
+
 export const dashboardService = {
   async getStats(): Promise<DashboardStats> {
     const response = await api.get<{ code: number; data: DashboardStats }>('/dashboard/stats');
@@ -30,6 +58,13 @@ export const dashboardService = {
 
   async getRecentActivities(): Promise<RecentActivity[]> {
     const response = await api.get<{ code: number; data: RecentActivity[] }>('/dashboard/activities');
+    return response.data.data;
+  },
+
+  async getProjectOverviews(): Promise<{ items: DashboardProjectOverview[] }> {
+    const response = await api.get<{ code: number; data: { items: DashboardProjectOverview[] } }>(
+      '/dashboard/projects',
+    );
     return response.data.data;
   },
 };

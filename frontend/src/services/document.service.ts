@@ -4,10 +4,15 @@ export interface Document {
   id: string;
   title: string;
   type: 'prd' | 'design' | 'api' | 'test' | 'general';
+  status?: 'DRAFT' | 'REVIEW' | 'FROZEN';
+  isPrimary?: boolean;
   content: string;
   version: string;
   projectId: string;
   authorId: string;
+  changeLevel?: 'MINOR' | 'MAJOR' | null;
+  changeReason?: string | null;
+  frozenAt?: string | null;
   author?: {
     id: string;
     name: string;
@@ -25,7 +30,10 @@ export interface CreateDocumentDto {
   projectId: string;
 }
 
-export interface UpdateDocumentDto extends Partial<CreateDocumentDto> {}
+export interface UpdateDocumentDto extends Partial<CreateDocumentDto> {
+  changeLevel?: 'MINOR' | 'MAJOR';
+  changeReason?: string;
+}
 
 export const documentService = {
   async getAll(): Promise<Document[]> {
@@ -50,6 +58,27 @@ export const documentService = {
 
   async update(id: string, data: UpdateDocumentDto): Promise<Document> {
     const response = await api.patch<{ code: number; message: string; data: Document }>(`/documents/${id}`, data);
+    return response.data.data;
+  },
+
+  async setPrimary(id: string): Promise<Document> {
+    const response = await api.post<{ code: number; message: string; data: Document }>(
+      `/documents/${id}/set-primary`,
+    );
+    return response.data.data;
+  },
+
+  async freeze(id: string): Promise<Document> {
+    const response = await api.post<{ code: number; message: string; data: Document }>(
+      `/documents/${id}/freeze`,
+    );
+    return response.data.data;
+  },
+
+  async unfreeze(id: string): Promise<Document> {
+    const response = await api.post<{ code: number; message: string; data: Document }>(
+      `/documents/${id}/unfreeze`,
+    );
     return response.data.data;
   },
 

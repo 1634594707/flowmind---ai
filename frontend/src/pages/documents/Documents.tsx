@@ -97,6 +97,25 @@ const Documents = () => {
       ),
     },
     {
+      title: 'PRD状态',
+      key: 'prdStatus',
+      render: (_, record) => {
+        if ((record.type || '').toLowerCase() !== 'prd') {
+          return <span className="text-sm text-gray-400">-</span>
+        }
+
+        const status = record.status || 'DRAFT'
+        const color = status === 'FROZEN' ? 'green' : status === 'REVIEW' ? 'orange' : 'blue'
+
+        return (
+          <div className="flex items-center gap-2">
+            <Tag color={color}>{status}</Tag>
+            {record.isPrimary ? <Tag color="purple">主PRD</Tag> : null}
+          </div>
+        )
+      },
+    },
+    {
       title: '所属项目',
       dataIndex: 'projectId',
       key: 'projectId',
@@ -175,6 +194,68 @@ const Documents = () => {
           >
             下载 PDF
           </button>
+
+          {(record.type || '').toLowerCase() === 'prd' ? (
+            <>
+              <button
+                className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer"
+                disabled={!!record.isPrimary}
+                onClick={() => {
+                  const run = async () => {
+                    try {
+                      await documentService.setPrimary(record.id)
+                      message.success('已设为主PRD')
+                      await loadDocuments()
+                    } catch (error: unknown) {
+                      const err = error as AxiosError<{ message?: string }>
+                      message.error(err.response?.data?.message || '设置主PRD失败')
+                    }
+                  }
+                  void run()
+                }}
+              >
+                设为主PRD
+              </button>
+              <button
+                className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer"
+                disabled={(record.status || '') === 'FROZEN'}
+                onClick={() => {
+                  const run = async () => {
+                    try {
+                      await documentService.freeze(record.id)
+                      message.success('PRD 已冻结')
+                      await loadDocuments()
+                    } catch (error: unknown) {
+                      const err = error as AxiosError<{ message?: string }>
+                      message.error(err.response?.data?.message || '冻结失败')
+                    }
+                  }
+                  void run()
+                }}
+              >
+                冻结
+              </button>
+              <button
+                className="text-gray-600 hover:text-gray-900 text-sm font-medium cursor-pointer"
+                disabled={(record.status || '') !== 'FROZEN'}
+                onClick={() => {
+                  const run = async () => {
+                    try {
+                      await documentService.unfreeze(record.id)
+                      message.success('PRD 已解冻')
+                      await loadDocuments()
+                    } catch (error: unknown) {
+                      const err = error as AxiosError<{ message?: string }>
+                      message.error(err.response?.data?.message || '解冻失败')
+                    }
+                  }
+                  void run()
+                }}
+              >
+                解冻
+              </button>
+            </>
+          ) : null}
         </div>
       ),
     },

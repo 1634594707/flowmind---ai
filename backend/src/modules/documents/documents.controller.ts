@@ -54,6 +54,36 @@ export class DocumentsController {
     };
   }
 
+  @Post(':id/set-primary')
+  async setPrimary(@Param('id') id: string, @Request() req) {
+    const document = await this.documentsService.setPrimaryPrd(id, req.user.userId);
+    return {
+      code: 200,
+      message: '已设为主PRD',
+      data: document,
+    };
+  }
+
+  @Post(':id/freeze')
+  async freeze(@Param('id') id: string, @Request() req) {
+    const document = await this.documentsService.freezePrd(id, req.user.userId);
+    return {
+      code: 200,
+      message: 'PRD 已冻结',
+      data: document,
+    };
+  }
+
+  @Post(':id/unfreeze')
+  async unfreeze(@Param('id') id: string, @Request() req) {
+    const document = await this.documentsService.unfreezePrd(id, req.user.userId);
+    return {
+      code: 200,
+      message: 'PRD 已解冻',
+      data: document,
+    };
+  }
+
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateDocumentDto: any, @Request() req) {
     const document = await this.documentsService.updateForUser(

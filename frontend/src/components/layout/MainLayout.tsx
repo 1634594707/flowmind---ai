@@ -67,6 +67,11 @@ const MainLayout = () => {
       label: 'AI 需求分析',
     },
     {
+      key: '/app/ai/design',
+      icon: <SparklesIcon className="w-5 h-5" />,
+      label: '设计助手',
+    },
+    {
       key: '/app/documents',
       icon: <DocumentTextIcon className="w-5 h-5" />,
       label: '文档',

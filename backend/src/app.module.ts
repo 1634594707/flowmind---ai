@@ -9,6 +9,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { AiModule } from './modules/ai/ai.module';
+import { ProjectEventsModule } from './modules/project-events/project-events.module';
+import { ProjectEventsApiModule } from './modules/project-events-api/project-events-api.module';
 
 @Module({
   imports: [
@@ -65,6 +67,8 @@ import { AiModule } from './modules/ai/ai.module';
     DashboardModule,
     TasksModule,
     DocumentsModule,
+    ProjectEventsModule,
+    ProjectEventsApiModule,
     AiModule,
   ],
 })

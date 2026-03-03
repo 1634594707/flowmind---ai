@@ -24,4 +24,13 @@ export class DashboardController {
       data: activities,
     };
   }
+
+  @Get('projects')
+  async getProjectOverviews(@Request() req) {
+    const result = await this.dashboardService.getProjectOverviews(req.user.userId);
+    return {
+      code: 200,
+      data: result,
+    };
+  }
 }

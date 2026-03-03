@@ -35,6 +35,28 @@ export interface GeneratePrdDto {
   documentTitle?: string;
 }
 
+export interface GenerateDesignDto {
+  projectId: string;
+  sourceDocumentId?: string;
+  context?: string;
+  documentTitle?: string;
+}
+
+export interface GenerateDesignResult {
+  document: {
+    id: string;
+    title: string;
+    type: string;
+    content: string;
+    version: string;
+    projectId: string;
+    authorId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  content: string;
+}
+
 export interface GeneratePrdResult {
   session: RequirementSession;
   document: {
@@ -102,6 +124,38 @@ export const aiService = {
   async generatePrd(sessionId: string, dto: GeneratePrdDto): Promise<GeneratePrdResult> {
     const response = await api.post<{ code: number; data: GeneratePrdResult }>(
       `/ai/requirement/sessions/${sessionId}/generate-prd`,
+      dto,
+    );
+    return response.data.data;
+  },
+
+  async generateArchitecture(dto: GenerateDesignDto): Promise<GenerateDesignResult> {
+    const response = await api.post<{ code: number; data: GenerateDesignResult }>(
+      '/ai/design/architecture',
+      dto,
+    );
+    return response.data.data;
+  },
+
+  async generateApiSpec(dto: GenerateDesignDto): Promise<GenerateDesignResult> {
+    const response = await api.post<{ code: number; data: GenerateDesignResult }>(
+      '/ai/design/api-spec',
+      dto,
+    );
+    return response.data.data;
+  },
+
+  async generateDatabaseDesign(dto: GenerateDesignDto): Promise<GenerateDesignResult> {
+    const response = await api.post<{ code: number; data: GenerateDesignResult }>(
+      '/ai/design/database',
+      dto,
+    );
+    return response.data.data;
+  },
+
+  async generateTechStack(dto: GenerateDesignDto): Promise<GenerateDesignResult> {
+    const response = await api.post<{ code: number; data: GenerateDesignResult }>(
+      '/ai/design/tech-stack',
       dto,
     );
     return response.data.data;

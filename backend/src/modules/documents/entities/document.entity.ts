@@ -21,6 +21,21 @@ export class Document {
   @Column({ default: 'general' })
   type: string; // prd, design, api, test, general
 
+  @Column({ name: 'is_primary', type: 'boolean', default: false })
+  isPrimary: boolean;
+
+  @Column({ name: 'status', default: 'DRAFT' })
+  status: string; // DRAFT, REVIEW, FROZEN
+
+  @Column({ name: 'change_level', type: 'varchar', nullable: true })
+  changeLevel: string | null; // MINOR, MAJOR
+
+  @Column({ name: 'change_reason', type: 'text', nullable: true })
+  changeReason: string | null;
+
+  @Column({ name: 'frozen_at', type: 'timestamptz', nullable: true })
+  frozenAt: Date | null;
+
   @Column({ type: 'text' })
   content: string;
 
