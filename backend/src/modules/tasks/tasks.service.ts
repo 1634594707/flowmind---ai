@@ -5,6 +5,10 @@ import { Task } from './entities/task.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { DocumentsService } from '../documents/documents.service';
 import { LlmService, type LlmChatMessage } from '../ai/llm.service';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { QueryTasksDto } from './dto/query-tasks.dto';
+import { DecomposeTasksDto } from './dto/decompose-tasks.dto';
 
 @Injectable()
 export class TasksService {
@@ -16,9 +20,12 @@ export class TasksService {
     private llmService: LlmService,
   ) {}
 
-  async create(createTaskDto: any, userId?: string): Promise<Task> {
+  async create(createTaskDto: CreateTaskDto, userId?: string): Promise<Task> {
     if (userId && createTaskDto?.projectId) {
       await this.projectsService.findOneForUser(createTaskDto.projectId, userId);
+    }
+    if (userId && createTaskDto?.sourceDocumentId) {
+      await this.documentsService.findOneForUser(createTaskDto.sourceDocumentId, userId);
     }
     const task = this.tasksRepository.create(createTaskDto);
     return (await this.tasksRepository.save(task)) as unknown as Task;
@@ -28,21 +35,31 @@ export class TasksService {
     return this.tasksRepository.find();
   }
 
-  async findAllForUser(userId: string, projectId?: string): Promise<Task[]> {
-    if (!projectId) {
-      return this.tasksRepository
-        .createQueryBuilder('task')
-        .leftJoin('task.project', 'project')
-        .where('project.ownerId = :userId', { userId })
-        .orderBy('task.updatedAt', 'DESC')
-        .getMany();
+  async findAllForUser(userId: string, query: QueryTasksDto = {}): Promise<Task[]> {
+    const qb = this.tasksRepository
+      .createQueryBuilder('task')
+      .leftJoin('task.project', 'project')
+      .where('project.ownerId = :userId', { userId });
+
+    if (query.projectId) {
+      await this.projectsService.findOneForUser(query.projectId, userId);
+      qb.andWhere('task.projectId = :projectId', { projectId: query.projectId });
     }
 
-    await this.projectsService.findOneForUser(projectId, userId);
-    return this.tasksRepository.find({
-      where: { projectId },
-      order: { updatedAt: 'DESC' } as any,
-    });
+    if (query.status) {
+      qb.andWhere('task.status = :status', { status: query.status });
+    }
+    if (query.priority) {
+      qb.andWhere('task.priority = :priority', { priority: query.priority });
+    }
+    if (query.assigneeId) {
+      qb.andWhere('task.assigneeId = :assigneeId', { assigneeId: query.assigneeId });
+    }
+    if (query.sourceDocumentId) {
+      qb.andWhere('task.sourceDocumentId = :sourceDocumentId', { sourceDocumentId: query.sourceDocumentId });
+    }
+
+    return qb.orderBy('task.updatedAt', 'DESC').getMany();
   }
 
   private extractFirstJsonBlock(text: string): string {
@@ -58,7 +75,7 @@ export class TasksService {
   }
 
   async decomposeAndCreateTasks(
-    dto: { projectId: string; sourceDocumentId?: string; context?: string },
+    dto: DecomposeTasksDto,
     userId: string,
   ): Promise<Task[]> {
     if (!dto.projectId) {
@@ -125,6 +142,7 @@ export class TasksService {
           status,
           priority,
           projectId: dto.projectId,
+          sourceDocumentId: dto.sourceDocumentId,
         } as Partial<Task>;
       })
       .filter(Boolean) as Array<Partial<Task>>;
@@ -156,12 +174,12 @@ export class TasksService {
     return task;
   }
 
-  async update(id: string, updateTaskDto: any): Promise<Task> {
+  async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
     await this.tasksRepository.update(id, updateTaskDto);
     return this.findOne(id);
   }
 
-  async updateForUser(id: string, updateTaskDto: any, userId: string): Promise<Task> {
+  async updateForUser(id: string, updateTaskDto: UpdateTaskDto, userId: string): Promise<Task> {
     await this.findOneForUser(id, userId);
     await this.tasksRepository.update(id, updateTaskDto);
     return this.findOneForUser(id, userId);

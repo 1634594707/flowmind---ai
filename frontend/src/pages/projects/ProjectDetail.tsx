@@ -102,6 +102,7 @@ const ProjectDetail = () => {
         right={
           <>
             <Button onClick={() => navigate('/app/projects')}>返回</Button>
+            <Button onClick={() => navigate(`/app/projects/${project.id}/tasks`)}>任务</Button>
             <Button type="primary" className="bg-purple-600 hover:bg-purple-700" onClick={() => navigate(`/app/projects/${project.id}/edit`)}>
               编辑项目
             </Button>

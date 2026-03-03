@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { DocumentsService } from './documents.service';
 import { Document } from './entities/document.entity';
 import { ProjectsService } from '../projects/projects.service';
+import { ProjectEventsService } from '../project-events/project-events.service';
 
 type MockRepo<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -14,6 +15,10 @@ describe('DocumentsService', () => {
 
   const projectsService = {
     findOneForUser: jest.fn(async () => ({})),
+  };
+
+  const projectEventsService = {
+    createEvent: jest.fn(async () => ({})),
   };
 
   beforeEach(async () => {
@@ -49,6 +54,10 @@ describe('DocumentsService', () => {
         {
           provide: ProjectsService,
           useValue: projectsService,
+        },
+        {
+          provide: ProjectEventsService,
+          useValue: projectEventsService,
         },
       ],
     }).compile();

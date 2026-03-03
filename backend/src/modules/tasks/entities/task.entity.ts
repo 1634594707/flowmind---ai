@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 import { User } from '../../users/entities/user.entity';
+import { Document } from '../../documents/entities/document.entity';
 
 @Entity('tasks')
 export class Task {
@@ -40,6 +41,13 @@ export class Task {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'assignee_id' })
   assignee: User;
+
+  @Column({ name: 'source_document_id', nullable: true })
+  sourceDocumentId: string;
+
+  @ManyToOne(() => Document)
+  @JoinColumn({ name: 'source_document_id' })
+  sourceDocument: Document;
 
   @Column({ type: 'date', nullable: true })
   dueDate: Date;

@@ -8,6 +8,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   projectId: string;
   assigneeId?: string;
+  sourceDocumentId?: string;
   assignee?: {
     id: string;
     name: string;
@@ -25,6 +26,7 @@ export interface CreateTaskDto {
   priority?: string;
   projectId: string;
   assigneeId?: string;
+  sourceDocumentId?: string;
   dueDate?: string;
 }
 
@@ -36,15 +38,24 @@ export interface DecomposeTasksDto {
   context?: string;
 }
 
+export interface GetTasksQuery {
+  projectId?: string;
+  status?: Task['status'];
+  priority?: Task['priority'];
+  assigneeId?: string;
+  sourceDocumentId?: string;
+}
+
 export const taskService = {
-  async getAll(): Promise<Task[]> {
-    const response = await api.get<{ code: number; data: Task[] }>('/tasks');
+  async getAll(query?: GetTasksQuery): Promise<Task[]> {
+    const response = await api.get<{ code: number; data: Task[] }>('/tasks', {
+      params: query,
+    });
     return response.data.data;
   },
 
   async getByProject(projectId: string): Promise<Task[]> {
-    const response = await api.get<{ code: number; data: Task[] }>(`/tasks?projectId=${projectId}`);
-    return response.data.data;
+    return this.getAll({ projectId });
   },
 
   async getById(id: string): Promise<Task> {

@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { DashboardService } from './dashboard.service';
 import { ProjectsService } from '../projects/projects.service';
+import { DocumentsService } from '../documents/documents.service';
 
 describe('DashboardService', () => {
   let service: DashboardService;
@@ -9,11 +10,16 @@ describe('DashboardService', () => {
     getStats: jest.fn(async () => ({ total: 2, active: 1, completed: 1, delayed: 0 })),
   };
 
+  const documentsService = {
+    findAllForUser: jest.fn(async () => []),
+  };
+
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DashboardService,
         { provide: ProjectsService, useValue: projectsService },
+        { provide: DocumentsService, useValue: documentsService },
       ],
     }).compile();
 

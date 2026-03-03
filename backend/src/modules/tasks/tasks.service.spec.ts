@@ -15,11 +15,21 @@ describe('TasksService', () => {
   let projectsService: { findOneForUser: jest.Mock };
 
   beforeEach(async () => {
+    const qb = {
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn(async () => [{ id: 't1' } as any]),
+      getOne: jest.fn(async () => ({ id: 't1' } as any)),
+    };
+
     repo = {
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => x),
       find: jest.fn(async () => [{ id: 't1' } as any]),
       findOne: jest.fn(async () => ({ id: 't1' } as any)),
+      createQueryBuilder: jest.fn(() => qb as any),
       update: jest.fn(async () => undefined),
       delete: jest.fn(async () => undefined),
     };

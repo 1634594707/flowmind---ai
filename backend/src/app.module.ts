@@ -11,6 +11,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { AiModule } from './modules/ai/ai.module';
 import { ProjectEventsModule } from './modules/project-events/project-events.module';
 import { ProjectEventsApiModule } from './modules/project-events-api/project-events-api.module';
+import { IntegrationsGithubModule } from './modules/integrations-github/integrations-github.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { ProjectEventsApiModule } from './modules/project-events-api/project-eve
     DocumentsModule,
     ProjectEventsModule,
     ProjectEventsApiModule,
+    IntegrationsGithubModule,
     AiModule,
   ],
 })

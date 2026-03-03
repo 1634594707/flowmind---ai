@@ -6,6 +6,7 @@ import Dashboard from '@/pages/dashboard/Dashboard'
 import ProjectList from '@/pages/projects/ProjectList'
 import ProjectDetail from '@/pages/projects/ProjectDetail'
 import ProjectEdit from '@/pages/projects/ProjectEdit'
+import ProjectTasks from '@/pages/tasks/ProjectTasks'
 import Documents from '@/pages/documents/Documents'
 import RequirementAnalysis from '@/pages/ai/RequirementAnalysis'
 import DesignAssistant from '@/pages/ai/DesignAssistant'
@@ -27,6 +28,7 @@ const AppRouter = () => {
         <Route path="projects" element={<ProjectList />} />
         <Route path="projects/new" element={<ProjectEdit />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
+        <Route path="projects/:id/tasks" element={<ProjectTasks />} />
         <Route path="projects/:id/edit" element={<ProjectEdit />} />
         <Route path="ai/requirement" element={<RequirementAnalysis />} />
         <Route path="ai/design" element={<DesignAssistant />} />
