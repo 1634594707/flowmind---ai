@@ -30,6 +30,12 @@ export interface CreateTaskDto {
 
 export interface UpdateTaskDto extends Partial<CreateTaskDto> {}
 
+export interface DecomposeTasksDto {
+  projectId: string;
+  sourceDocumentId?: string;
+  context?: string;
+}
+
 export const taskService = {
   async getAll(): Promise<Task[]> {
     const response = await api.get<{ code: number; data: Task[] }>('/tasks');
@@ -48,6 +54,11 @@ export const taskService = {
 
   async create(data: CreateTaskDto): Promise<Task> {
     const response = await api.post<{ code: number; message: string; data: Task }>('/tasks', data);
+    return response.data.data;
+  },
+
+  async decompose(data: DecomposeTasksDto): Promise<Task[]> {
+    const response = await api.post<{ code: number; message: string; data: Task[] }>('/tasks/decompose', data);
     return response.data.data;
   },
 

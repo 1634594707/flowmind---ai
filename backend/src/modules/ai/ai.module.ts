@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiController } from './ai.controller';
+import { AiDesignController } from './ai-design.controller';
 import { AiService } from './ai.service';
 import { RequirementSession } from './entities/requirement-session.entity';
 import { RequirementMessage } from './entities/requirement-message.entity';
@@ -14,8 +15,8 @@ import { LlmService } from './llm.service';
     ProjectsModule,
     DocumentsModule,
   ],
-  controllers: [AiController],
+  controllers: [AiController, AiDesignController],
   providers: [AiService, LlmService],
-  exports: [AiService],
+  exports: [AiService, LlmService],
 })
 export class AiModule {}
