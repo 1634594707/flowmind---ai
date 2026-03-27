@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../../common/types/request.interface';
 
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard)
@@ -8,7 +9,7 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('stats')
-  async getStats(@Request() req) {
+  async getStats(@Request() req: AuthenticatedRequest) {
     const stats = await this.dashboardService.getStats(req.user.userId);
     return {
       code: 200,
@@ -17,7 +18,7 @@ export class DashboardController {
   }
 
   @Get('activities')
-  async getActivities(@Request() req) {
+  async getActivities(@Request() req: AuthenticatedRequest) {
     const activities = await this.dashboardService.getActivities(req.user.userId);
     return {
       code: 200,
@@ -26,7 +27,7 @@ export class DashboardController {
   }
 
   @Get('projects')
-  async getProjectOverviews(@Request() req) {
+  async getProjectOverviews(@Request() req: AuthenticatedRequest) {
     const result = await this.dashboardService.getProjectOverviews(req.user.userId);
     return {
       code: 200,

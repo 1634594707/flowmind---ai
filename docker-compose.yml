@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 数据库
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: flowmind-postgres
@@ -14,6 +14,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/database/seeds:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U flowmind"]
       interval: 10s
@@ -22,11 +23,12 @@ services:
     networks:
       - flowmind-network
 
-  # Redis 缓存
+  # Redis Cache and Pub/Sub
   redis:
     image: redis:7-alpine
     container_name: flowmind-redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -39,15 +41,17 @@ services:
     networks:
       - flowmind-network
 
-  # 后端服务（开发环境）
-  backend:
+  # Backend Service (Development with Hot Reload)
+  backend-dev:
     build:
       context: ./backend
       dockerfile: ../docker/Dockerfile.backend
-    container_name: flowmind-backend
+      target: development
+    container_name: flowmind-backend-dev
     restart: unless-stopped
     ports:
       - "3000:3000"
+      - "9229:9229"  # Debug port
     environment:
       NODE_ENV: development
       DATABASE_HOST: postgres
@@ -57,9 +61,13 @@ services:
       DATABASE_NAME: flowmind
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./backend/src:/app/src
+      - ./backend/test:/app/test
+      - backend_node_modules:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,31 +76,108 @@ services:
     networks:
       - flowmind-network
     profiles:
-      - production
+      - dev
 
-  # 前端服务（开发环境）
+  # Frontend Service (Development with Hot Reload)
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+      target: development
+    container_name: flowmind-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_WS_URL: ws://localhost:3000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend-dev
+    networks:
+      - flowmind-network
+    profiles:
+      - dev
+
+  # Backend Service (Production)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+      target: production
+    container_name: flowmind-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: flowmind
+      DATABASE_PASSWORD: flowmind123
+      DATABASE_NAME: flowmind
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - flowmind-network
+    profiles:
+      - prod
+
+  # Frontend Service (Production)
   frontend:
     build:
       context: ./frontend
       dockerfile: ../docker/Dockerfile.frontend
+      target: production
     container_name: flowmind-frontend
     restart: unless-stopped
     ports:
       - "80:80"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
     networks:
       - flowmind-network
     profiles:
-      - production
+      - prod
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: flowmind-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - flowmind-network
+    profiles:
+      - prod
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  backend_node_modules:
+    driver: local
+  frontend_node_modules:
     driver: local
 
 networks:

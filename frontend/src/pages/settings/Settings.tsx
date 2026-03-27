@@ -1,95 +1,151 @@
-import { useEffect, useState } from 'react'
-import { Card, Form, Input, Button, Switch, Select, Modal, message } from 'antd'
-import { useNavigate } from 'react-router-dom'
-import { UserIcon, BellIcon, ShieldCheckIcon, PaintBrushIcon } from '@heroicons/react/24/outline'
-import type { AxiosError } from 'axios'
-import { authService } from '../../services/auth.service'
+import { useEffect, useState } from 'react';
+import { Card, Form, Input, Button, Switch, Select, Modal, message } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { UserIcon, BellIcon, ShieldCheckIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
+import type { AxiosError } from 'axios';
+import { authService } from '../../services/auth.service';
+import { preferencesService, type UserPreferences } from '../../services/preferences.service';
 
 const Settings = () => {
-  const navigate = useNavigate()
-  const [form] = Form.useForm()
-  const [passwordForm] = Form.useForm()
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [changingPassword, setChangingPassword] = useState(false)
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorDisableModalOpen, setTwoFactorDisableModalOpen] = useState(false);
+  const [twoFactorSecret, setTwoFactorSecret] = useState('');
+  const [twoFactorOtpAuthUrl, setTwoFactorOtpAuthUrl] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [prefs, setPrefs] = useState<UserPreferences>(() => preferencesService.load());
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
+    const user = authService.getCurrentUser();
     if (user) {
       form.setFieldsValue({
         name: user.name,
         email: user.email,
         role: user.role,
-      })
-      setTwoFactorEnabled(!!user.twoFactorEnabled)
+      });
+      setTwoFactorEnabled(!!user.twoFactorEnabled);
     }
-  }, [form])
+  }, [form]);
 
   const handleSave = async (values: { name?: string; email?: string }) => {
-    setSaving(true)
+    setSaving(true);
     try {
       await authService.updateProfile({
         name: values.name,
         email: values.email,
-      })
-      message.success('保存成功')
+      });
+      message.success('保存成功');
     } catch (error: unknown) {
-      console.error('Update profile error:', error)
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '保存失败，请稍后重试')
+      console.error('Update profile error:', error);
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '保存失败，请稍后重试');
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleToggleTwoFactor = async (enabled: boolean) => {
-    const prev = twoFactorEnabled
-    setTwoFactorEnabled(enabled)
+    const prev = twoFactorEnabled;
     try {
-      const next = await authService.setTwoFactorEnabled(enabled)
-      setTwoFactorEnabled(next)
-      message.success(next ? '两步验证已启用' : '两步验证已关闭')
+      if (enabled) {
+        const setup = await authService.setupTwoFactor();
+        setTwoFactorSecret(setup.secret);
+        setTwoFactorOtpAuthUrl(setup.otpauthUrl);
+        setTwoFactorCode('');
+        setTwoFactorModalOpen(true);
+      } else {
+        setTwoFactorCode('');
+        setTwoFactorDisableModalOpen(true);
+      }
     } catch (error: unknown) {
-      console.error('Update 2FA error:', error)
-      setTwoFactorEnabled(prev)
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '操作失败，请稍后重试')
+      console.error('Update 2FA error:', error);
+      setTwoFactorEnabled(prev);
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '操作失败，请稍后重试');
     }
-  }
+  };
+
+  const handleConfirmEnableTwoFactor = async () => {
+    if (twoFactorCode.length !== 6) {
+      message.error('请输入 6 位验证码');
+      return;
+    }
+    setTwoFactorLoading(true);
+    try {
+      const next = await authService.verifyTwoFactor(twoFactorCode);
+      setTwoFactorEnabled(next);
+      setTwoFactorModalOpen(false);
+      setTwoFactorCode('');
+      message.success('两步验证已启用');
+    } catch (error: unknown) {
+      console.error('Verify 2FA error:', error);
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '验证码错误，请重试');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleConfirmDisableTwoFactor = async () => {
+    if (twoFactorCode.length !== 6) {
+      message.error('请输入 6 位验证码');
+      return;
+    }
+    setTwoFactorLoading(true);
+    try {
+      const next = await authService.disableTwoFactor(twoFactorCode);
+      setTwoFactorEnabled(next);
+      setTwoFactorDisableModalOpen(false);
+      setTwoFactorCode('');
+      message.success('两步验证已关闭');
+    } catch (error: unknown) {
+      console.error('Disable 2FA error:', error);
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '验证码错误，请重试');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
 
   const handleChangePassword = async () => {
     try {
-      const values = await passwordForm.validateFields()
-      setChangingPassword(true)
-      await authService.changePassword(values.currentPassword, values.newPassword)
-      message.success('密码修改成功')
-      setPasswordModalOpen(false)
-      passwordForm.resetFields()
+      const values = await passwordForm.validateFields();
+      setChangingPassword(true);
+      await authService.changePassword(values.currentPassword, values.newPassword);
+      message.success('密码修改成功');
+      setPasswordModalOpen(false);
+      passwordForm.resetFields();
     } catch (error: unknown) {
-      const maybeFormError = error as { errorFields?: unknown }
+      const maybeFormError = error as { errorFields?: unknown };
       if (maybeFormError?.errorFields) {
-        return
+        return;
       }
-      console.error('Change password error:', error)
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '修改密码失败，请稍后重试')
+      console.error('Change password error:', error);
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '修改密码失败，请稍后重试');
     } finally {
-      setChangingPassword(false)
+      setChangingPassword(false);
     }
-  }
+  };
 
   const handleLogout = async () => {
     try {
-      await authService.logout()
-      message.success('已退出登录')
-      navigate('/login')
+      await authService.logout();
+      message.success('已退出登录');
+      navigate('/login');
     } catch (error: unknown) {
-      console.error('Logout error:', error)
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '退出失败，请稍后重试')
+      console.error('Logout error:', error);
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '退出失败，请稍后重试');
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -99,7 +155,7 @@ const Settings = () => {
       </div>
 
       <div className="grid gap-6">
-        <Card 
+        <Card
           title={
             <div className="flex items-center gap-2">
               <UserIcon className="w-5 h-5 text-gray-600" />
@@ -108,11 +164,7 @@ const Settings = () => {
           }
           className="rounded-xl border border-gray-200 shadow-sm"
         >
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSave}
-          >
+          <Form form={form} layout="vertical" onFinish={handleSave}>
             <Form.Item label="姓名" name="name">
               <Input placeholder="请输入姓名" />
             </Form.Item>
@@ -135,7 +187,7 @@ const Settings = () => {
           </Form>
         </Card>
 
-        <Card 
+        <Card
           title={
             <div className="flex items-center gap-2">
               <BellIcon className="w-5 h-5 text-gray-600" />
@@ -150,26 +202,53 @@ const Settings = () => {
                 <div className="font-medium text-gray-900">邮件通知</div>
                 <div className="text-sm text-gray-500">接收项目更新的邮件通知</div>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={prefs.notifications.email}
+                onChange={v =>
+                  setPrefs(
+                    preferencesService.update({
+                      notifications: { ...prefs.notifications, email: v },
+                    })
+                  )
+                }
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-gray-900">桌面通知</div>
                 <div className="text-sm text-gray-500">在浏览器中显示通知</div>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={prefs.notifications.desktop}
+                onChange={v =>
+                  setPrefs(
+                    preferencesService.update({
+                      notifications: { ...prefs.notifications, desktop: v },
+                    })
+                  )
+                }
+              />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-gray-900">任务提醒</div>
                 <div className="text-sm text-gray-500">任务截止前提醒</div>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                checked={prefs.notifications.taskReminder}
+                onChange={v =>
+                  setPrefs(
+                    preferencesService.update({
+                      notifications: { ...prefs.notifications, taskReminder: v },
+                    })
+                  )
+                }
+              />
             </div>
           </div>
         </Card>
 
-        <Card 
+        <Card
           title={
             <div className="flex items-center gap-2">
               <PaintBrushIcon className="w-5 h-5 text-gray-600" />
@@ -180,14 +259,30 @@ const Settings = () => {
         >
           <Form layout="vertical">
             <Form.Item label="主题模式">
-              <Select defaultValue="light" className="w-full">
+              <Select
+                value={prefs.appearance.theme}
+                onChange={v =>
+                  setPrefs(
+                    preferencesService.update({ appearance: { ...prefs.appearance, theme: v } })
+                  )
+                }
+                className="w-full"
+              >
                 <Select.Option value="light">浅色</Select.Option>
                 <Select.Option value="dark">深色</Select.Option>
-                <Select.Option value="auto">跟随系统</Select.Option>
+                <Select.Option value="system">跟随系统</Select.Option>
               </Select>
             </Form.Item>
             <Form.Item label="语言">
-              <Select defaultValue="zh-CN" className="w-full">
+              <Select
+                value={prefs.appearance.locale}
+                onChange={v =>
+                  setPrefs(
+                    preferencesService.update({ appearance: { ...prefs.appearance, locale: v } })
+                  )
+                }
+                className="w-full"
+              >
                 <Select.Option value="zh-CN">简体中文</Select.Option>
                 <Select.Option value="en-US">English</Select.Option>
               </Select>
@@ -195,7 +290,7 @@ const Settings = () => {
           </Form>
         </Card>
 
-        <Card 
+        <Card
           title={
             <div className="flex items-center gap-2">
               <ShieldCheckIcon className="w-5 h-5 text-gray-600" />
@@ -226,8 +321,8 @@ const Settings = () => {
         title="修改密码"
         open={passwordModalOpen}
         onCancel={() => {
-          setPasswordModalOpen(false)
-          passwordForm.resetFields()
+          setPasswordModalOpen(false);
+          passwordForm.resetFields();
         }}
         onOk={handleChangePassword}
         confirmLoading={changingPassword}
@@ -245,14 +340,69 @@ const Settings = () => {
           <Form.Item
             label="新密码"
             name="newPassword"
-            rules={[{ required: true, message: '请输入新密码' }, { min: 6, message: '密码至少 6 位' }]}
+            rules={[
+              { required: true, message: '请输入新密码' },
+              { min: 6, message: '密码至少 6 位' },
+            ]}
           >
             <Input.Password placeholder="请输入新密码" />
           </Form.Item>
         </Form>
       </Modal>
-    </div>
-  )
-}
 
-export default Settings
+      <Modal
+        title="启用两步验证"
+        open={twoFactorModalOpen}
+        onCancel={() => {
+          setTwoFactorModalOpen(false);
+          setTwoFactorCode('');
+        }}
+        onOk={handleConfirmEnableTwoFactor}
+        confirmLoading={twoFactorLoading}
+        okText="验证并启用"
+        cancelText="取消"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            请在身份验证器应用中手动添加以下密钥，然后输入 6 位验证码完成启用。
+          </p>
+          <Input value={twoFactorSecret} readOnly />
+          <Input value={twoFactorOtpAuthUrl} readOnly />
+          <Input
+            value={twoFactorCode}
+            onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="请输入 6 位验证码"
+            maxLength={6}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        title="关闭两步验证"
+        open={twoFactorDisableModalOpen}
+        onCancel={() => {
+          setTwoFactorDisableModalOpen(false);
+          setTwoFactorCode('');
+        }}
+        onOk={handleConfirmDisableTwoFactor}
+        confirmLoading={twoFactorLoading}
+        okText="确认关闭"
+        cancelText="取消"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            请输入当前身份验证器中的 6 位验证码以关闭两步验证。
+          </p>
+          <Input
+            value={twoFactorCode}
+            onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="请输入 6 位验证码"
+            maxLength={6}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default Settings;

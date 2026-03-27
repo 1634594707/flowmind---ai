@@ -7,7 +7,7 @@ import { ProjectsService } from '../projects/projects.service';
 import { DocumentsService } from '../documents/documents.service';
 import { LlmService } from '../ai/llm.service';
 
-type MockRepo<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
+type MockRepo<T extends object> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -21,14 +21,14 @@ describe('TasksService', () => {
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       getMany: jest.fn(async () => [{ id: 't1' } as any]),
-      getOne: jest.fn(async () => ({ id: 't1' } as any)),
+      getOne: jest.fn(async () => ({ id: 't1' }) as any),
     };
 
     repo = {
       create: jest.fn((x) => x),
       save: jest.fn(async (x) => x),
       find: jest.fn(async () => [{ id: 't1' } as any]),
-      findOne: jest.fn(async () => ({ id: 't1' } as any)),
+      findOne: jest.fn(async () => ({ id: 't1' }) as any),
       createQueryBuilder: jest.fn(() => qb as any),
       update: jest.fn(async () => undefined),
       delete: jest.fn(async () => undefined),

@@ -75,7 +75,10 @@ export class IntegrationsGithubService {
     return `https://github.com/login/oauth/authorize?${params.toString()}`;
   }
 
-  async handleCallback(code: string, state: string): Promise<{ userId: string; projectId?: string }>{
+  async handleCallback(
+    code: string,
+    state: string,
+  ): Promise<{ userId: string; projectId?: string }> {
     if (!code) {
       throw new BadRequestException('code is required');
     }
@@ -136,14 +139,14 @@ export class IntegrationsGithubService {
     const entity = existing
       ? this.githubIntegrationsRepo.merge(existing, {
           accessToken,
-          tokenType: tokenJson.token_type || null,
-          scope: tokenJson.scope || null,
+          tokenType: tokenJson.token_type || '',
+          scope: tokenJson.scope || '',
         })
       : this.githubIntegrationsRepo.create({
           userId,
           accessToken,
-          tokenType: tokenJson.token_type || null,
-          scope: tokenJson.scope || null,
+          tokenType: tokenJson.token_type || '',
+          scope: tokenJson.scope || '',
         });
 
     await this.githubIntegrationsRepo.save(entity as any);
@@ -159,7 +162,9 @@ export class IntegrationsGithubService {
     return row.accessToken;
   }
 
-  async listReposForUser(userId: string): Promise<Array<{ id: number; fullName: string; htmlUrl: string; private: boolean }>> {
+  async listReposForUser(
+    userId: string,
+  ): Promise<Array<{ id: number; fullName: string; htmlUrl: string; private: boolean }>> {
     const token = await this.getAccessTokenForUser(userId);
 
     const resp = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
@@ -183,7 +188,11 @@ export class IntegrationsGithubService {
     }));
   }
 
-  async bindRepoToProject(userId: string, projectId: string, fullName: string): Promise<ProjectGithubRepo> {
+  async bindRepoToProject(
+    userId: string,
+    projectId: string,
+    fullName: string,
+  ): Promise<ProjectGithubRepo> {
     await this.projectsService.findOneForUser(projectId, userId);
 
     const token = await this.getAccessTokenForUser(userId);

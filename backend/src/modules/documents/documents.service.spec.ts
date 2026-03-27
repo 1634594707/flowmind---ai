@@ -7,7 +7,7 @@ import { Document } from './entities/document.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { ProjectEventsService } from '../project-events/project-events.service';
 
-type MockRepo<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
+type MockRepo<T extends object> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
@@ -93,7 +93,7 @@ describe('DocumentsService', () => {
       getMany: jest.fn(async () => []),
       getOne: jest.fn(async () => doc),
     };
-    ;(repo.createQueryBuilder as jest.Mock).mockReturnValue(qb);
+    (repo.createQueryBuilder as jest.Mock).mockReturnValue(qb);
 
     await service.updateForUser('d1', { projectId: 'p2' } as any, 'u1');
 

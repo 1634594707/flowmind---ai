@@ -12,6 +12,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { ProjectEventsModule } from './modules/project-events/project-events.module';
 import { ProjectEventsApiModule } from './modules/project-events-api/project-events-api.module';
 import { IntegrationsGithubModule } from './modules/integrations-github/integrations-github.module';
+import { DatabaseCompatService } from './common/services/database-compat.service';
 
 @Module({
   imports: [
@@ -55,7 +56,8 @@ import { IntegrationsGithubModule } from './modules/integrations-github/integrat
         password: configService.get('DB_PASSWORD') || '',
         database: configService.get('DB_DATABASE', 'flowmind'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        // Avoid destructive auto schema sync on existing databases.
+        synchronize: false,
         logging: configService.get('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
@@ -73,5 +75,6 @@ import { IntegrationsGithubModule } from './modules/integrations-github/integrat
     IntegrationsGithubModule,
     AiModule,
   ],
+  providers: [DatabaseCompatService],
 })
 export class AppModule {}

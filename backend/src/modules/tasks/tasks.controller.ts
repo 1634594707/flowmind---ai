@@ -16,6 +16,9 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { QueryTasksDto } from './dto/query-tasks.dto';
 import { DecomposeTasksDto } from './dto/decompose-tasks.dto';
+import { AuthenticatedRequest } from '../../common/types/request.interface';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -23,7 +26,9 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  async findAll(@Query() query: QueryTasksDto, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['task.read'])
+  async findAll(@Query() query: QueryTasksDto, @Request() req: AuthenticatedRequest) {
     const tasks = await this.tasksService.findAllForUser(req.user.userId, query);
     return {
       code: 200,
@@ -32,7 +37,9 @@ export class TasksController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['task.read'])
+  async findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const task = await this.tasksService.findOneForUser(id, req.user.userId);
     return {
       code: 200,
@@ -41,7 +48,9 @@ export class TasksController {
   }
 
   @Post()
-  async create(@Body() createTaskDto: CreateTaskDto, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['task.create'])
+  async create(@Body() createTaskDto: CreateTaskDto, @Request() req: AuthenticatedRequest) {
     const task = await this.tasksService.create(createTaskDto, req.user.userId);
     return {
       code: 201,
@@ -51,7 +60,9 @@ export class TasksController {
   }
 
   @Post('decompose')
-  async decompose(@Body() dto: DecomposeTasksDto, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['task.create'])
+  async decompose(@Body() dto: DecomposeTasksDto, @Request() req: AuthenticatedRequest) {
     const tasks = await this.tasksService.decomposeAndCreateTasks(dto, req.user.userId);
     return {
       code: 201,
@@ -61,7 +72,13 @@ export class TasksController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['task.update'])
+  async update(
+    @Param('id') id: string,
+    @Body() updateTaskDto: UpdateTaskDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const task = await this.tasksService.updateForUser(id, updateTaskDto, req.user.userId);
     return {
       code: 200,
@@ -71,7 +88,9 @@ export class TasksController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['task.delete'])
+  async remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     await this.tasksService.removeForUser(id, req.user.userId);
     return {
       code: 200,

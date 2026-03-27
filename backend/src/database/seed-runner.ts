@@ -1,31 +1,26 @@
-import 'dotenv/config';
-import { DataSource } from 'typeorm';
+import { config } from 'dotenv';
+import dataSource from '../config/typeorm.config';
 import { seedDatabase } from './seeds/seed';
 
-const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_DATABASE || 'flowmind',
-  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  synchronize: true,
-});
+// Load environment variables
+config();
 
 async function run() {
   try {
-    console.log('🔌 连接数据库...');
-    await AppDataSource.initialize();
-    console.log('✅ 数据库连接成功');
+    console.log('🔌 Connecting to database...');
+    await dataSource.initialize();
+    console.log('✅ Database connected successfully');
 
-    await seedDatabase(AppDataSource);
+    console.log('🌱 Seeding database...');
+    await seedDatabase(dataSource);
+    console.log('✅ Database seeded successfully');
 
-    await AppDataSource.destroy();
-    console.log('👋 数据库连接已关闭');
+    await dataSource.destroy();
+    console.log('👋 Database connection closed');
     process.exit(0);
   } catch (error) {
-    console.error('❌ 错误:', error);
+    console.error('❌ Error:', error);
+    await dataSource.destroy();
     process.exit(1);
   }
 }

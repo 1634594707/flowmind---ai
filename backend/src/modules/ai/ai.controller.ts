@@ -15,6 +15,7 @@ import { CreateRequirementSessionDto } from './dto/create-requirement-session.dt
 import { AddRequirementMessageDto } from './dto/add-requirement-message.dto';
 import { GeneratePrdDto } from './dto/generate-prd.dto';
 import { ChatRequirementDto } from './dto/chat-requirement.dto';
+import { AuthenticatedRequest } from '../../common/types/request.interface';
 
 @Controller('ai/requirement')
 @UseGuards(JwtAuthGuard)
@@ -22,7 +23,10 @@ export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post('sessions')
-  async createSession(@Body() dto: CreateRequirementSessionDto, @Request() req) {
+  async createSession(
+    @Body() dto: CreateRequirementSessionDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const session = await this.aiService.createRequirementSession(dto, req.user.userId);
     return {
       code: 201,
@@ -32,7 +36,7 @@ export class AiController {
   }
 
   @Get('sessions')
-  async listSessions(@Query('projectId') projectId: string, @Request() req) {
+  async listSessions(@Query('projectId') projectId: string, @Request() req: AuthenticatedRequest) {
     if (!projectId) {
       throw new BadRequestException('projectId is required');
     }
@@ -47,7 +51,7 @@ export class AiController {
   }
 
   @Get('sessions/:id')
-  async getSession(@Param('id') id: string, @Request() req) {
+  async getSession(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const session = await this.aiService.getRequirementSession(id, req.user.userId);
     return {
       code: 200,
@@ -56,7 +60,11 @@ export class AiController {
   }
 
   @Post('sessions/:id/messages')
-  async addMessage(@Param('id') id: string, @Body() dto: AddRequirementMessageDto, @Request() req) {
+  async addMessage(
+    @Param('id') id: string,
+    @Body() dto: AddRequirementMessageDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const message = await this.aiService.addRequirementMessage(id, dto, req.user.userId);
     return {
       code: 201,
@@ -66,7 +74,11 @@ export class AiController {
   }
 
   @Post('sessions/:id/chat')
-  async chat(@Param('id') id: string, @Body() dto: ChatRequirementDto, @Request() req) {
+  async chat(
+    @Param('id') id: string,
+    @Body() dto: ChatRequirementDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const result = await this.aiService.chat(id, dto.content, req.user.userId);
     return {
       code: 200,
@@ -76,7 +88,11 @@ export class AiController {
   }
 
   @Post('sessions/:id/generate-prd')
-  async generatePrd(@Param('id') id: string, @Body() dto: GeneratePrdDto, @Request() req) {
+  async generatePrd(
+    @Param('id') id: string,
+    @Body() dto: GeneratePrdDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const result = await this.aiService.generatePrd(id, dto, req.user.userId);
     return {
       code: 200,

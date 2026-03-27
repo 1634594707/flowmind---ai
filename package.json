@@ -3,37 +3,61 @@
   "version": "1.0.0",
   "description": "AI-driven SDLC management platform",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "scripts": {
+    "setup": "node scripts/setup-monorepo.js",
     "setup:db": "node scripts/setup-database.js",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run start:dev",
-    "build": "npm run build:frontend && npm run build:backend",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && npm run build",
-    "docker:up": "docker-compose up -d",
+    "clean:install": "node scripts/clean-install.js",
+    "dev": "concurrently \"pnpm --filter flowmind-frontend dev\" \"pnpm --filter flowmind-backend start:dev\"",
+    "dev:frontend": "pnpm --filter flowmind-frontend dev",
+    "dev:backend": "pnpm --filter flowmind-backend start:dev",
+    "build": "pnpm --filter flowmind-shared build && pnpm --filter flowmind-frontend build && pnpm --filter flowmind-backend build",
+    "build:shared": "pnpm --filter flowmind-shared build",
+    "build:frontend": "pnpm --filter flowmind-frontend build",
+    "build:backend": "pnpm --filter flowmind-backend build",
+    "docker:dev": "docker-compose --profile dev up",
+    "docker:dev:build": "docker-compose --profile dev up --build",
+    "docker:dev:down": "docker-compose --profile dev down",
+    "docker:prod": "docker-compose --profile prod up -d",
+    "docker:prod:build": "docker-compose --profile prod up -d --build",
+    "docker:prod:down": "docker-compose --profile prod down",
+    "docker:up": "docker-compose up postgres redis -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "db:migrate": "cd backend && npm run migration:run",
-    "db:seed": "cd backend && npm run seed",
-    "test": "npm run test:frontend && npm run test:backend",
-    "test:frontend": "cd frontend && npm run test",
-    "test:backend": "cd backend && npm run test",
-    "lint": "npm run lint:frontend && npm run lint:backend",
-    "lint:frontend": "cd frontend && npm run lint",
-    "lint:backend": "cd backend && npm run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "db:migrate": "pnpm --filter flowmind-backend migration:run",
+    "db:seed": "pnpm --filter flowmind-backend seed",
+    "test": "pnpm -r test",
+    "test:shared": "pnpm --filter flowmind-shared test",
+    "test:frontend": "pnpm --filter flowmind-frontend test",
+    "test:backend": "pnpm --filter flowmind-backend test",
+    "lint": "pnpm -r lint",
+    "lint:shared": "pnpm --filter flowmind-shared lint",
+    "lint:frontend": "pnpm --filter flowmind-frontend lint",
+    "lint:backend": "pnpm --filter flowmind-backend lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "prepare": "husky install"
   },
   "devDependencies": {
+    "@types/node": "^20.11.5",
     "concurrently": "^8.2.2",
-    "prettier": "^3.2.5"
+    "eslint": "^8.56.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.1",
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,json,md}": [
+      "prettier --write"
+    ]
   }
 }

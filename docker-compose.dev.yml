@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+
+  redis:
+    extends:
+      file: docker-compose.yml
+      service: redis
+
+  backend-dev:
+    extends:
+      file: docker-compose.yml
+      service: backend-dev
+
+  frontend-dev:
+    extends:
+      file: docker-compose.yml
+      service: frontend-dev

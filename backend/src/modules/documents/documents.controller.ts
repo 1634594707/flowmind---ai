@@ -13,6 +13,9 @@ import {
 import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectsService } from '../projects/projects.service';
+import { AuthenticatedRequest } from '../../common/types/request.interface';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard)
@@ -23,7 +26,12 @@ export class DocumentsController {
   ) {}
 
   @Get()
-  async findAll(@Query('projectId') projectId: string | undefined, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.read'])
+  async findAll(
+    @Query('projectId') projectId: string | undefined,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const documents = await this.documentsService.findAllForUser(req.user.userId, projectId);
     return {
       code: 200,
@@ -32,7 +40,9 @@ export class DocumentsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.read'])
+  async findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const document = await this.documentsService.findOneForUser(id, req.user.userId);
     return {
       code: 200,
@@ -41,7 +51,9 @@ export class DocumentsController {
   }
 
   @Post()
-  async create(@Body() createDocumentDto: any, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.create'])
+  async create(@Body() createDocumentDto: any, @Request() req: AuthenticatedRequest) {
     await this.projectsService.findOneForUser(createDocumentDto.projectId, req.user.userId);
     const document = await this.documentsService.create({
       ...createDocumentDto,
@@ -55,7 +67,9 @@ export class DocumentsController {
   }
 
   @Post(':id/set-primary')
-  async setPrimary(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.update'])
+  async setPrimary(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const document = await this.documentsService.setPrimaryPrd(id, req.user.userId);
     return {
       code: 200,
@@ -65,7 +79,9 @@ export class DocumentsController {
   }
 
   @Post(':id/freeze')
-  async freeze(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.update'])
+  async freeze(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const document = await this.documentsService.freezePrd(id, req.user.userId);
     return {
       code: 200,
@@ -75,7 +91,9 @@ export class DocumentsController {
   }
 
   @Post(':id/unfreeze')
-  async unfreeze(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.update'])
+  async unfreeze(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const document = await this.documentsService.unfreezePrd(id, req.user.userId);
     return {
       code: 200,
@@ -85,7 +103,13 @@ export class DocumentsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateDocumentDto: any, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.update'])
+  async update(
+    @Param('id') id: string,
+    @Body() updateDocumentDto: any,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const document = await this.documentsService.updateForUser(
       id,
       updateDocumentDto,
@@ -99,7 +123,9 @@ export class DocumentsController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @Request() req) {
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(['document.update'])
+  async remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     await this.documentsService.removeForUser(id, req.user.userId);
     return {
       code: 200,

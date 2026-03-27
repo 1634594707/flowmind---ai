@@ -366,56 +366,6 @@ export class AiService {
     };
   }
 
-  private buildPrdMarkdown(session: RequirementSession, messages: RequirementMessage[]): string {
-    const userMessages = messages.filter((m) => m.role === 'user');
-
-    const highlights = userMessages.slice(0, 8).map((m, i) => `- ${i + 1}. ${m.content.trim()}`);
-
-    const rawConversation = messages
-      .map((m) => {
-        const speaker = m.role === 'user' ? '用户' : m.role === 'assistant' ? 'AI' : '系统';
-        return `**${speaker}**：${m.content.trim()}`;
-      })
-      .join('\n\n');
-
-    return [
-      `# ${session.title}`,
-      '',
-      '## 1. 背景与目标',
-      session.summary ? session.summary : '（待补充）',
-      '',
-      '## 2. 需求要点（来自访谈）',
-      highlights.length ? highlights.join('\n') : '- （暂无）',
-      '',
-      '## 3. 用户故事',
-      '- 作为【用户】，我希望【目标】，以便【价值】。',
-      '',
-      '## 4. 功能范围',
-      '### 4.1 核心功能',
-      '- （待补充）',
-      '',
-      '### 4.2 非功能性需求',
-      '- 性能：',
-      '- 可用性：',
-      '- 安全：',
-      '',
-      '## 5. 交互与界面草案',
-      '- （待补充）',
-      '',
-      '## 6. 数据与埋点',
-      '- （待补充）',
-      '',
-      '## 7. 风险与开放问题',
-      '- （待补充）',
-      '',
-      '---',
-      '',
-      '## 附录：访谈记录',
-      rawConversation.length ? rawConversation : '（暂无）',
-      '',
-    ].join('\n');
-  }
-
   async generatePrd(sessionId: string, dto: GeneratePrdDto, userId: string) {
     const session = await this.sessionsRepository.findOne({
       where: { id: sessionId, ownerId: userId },

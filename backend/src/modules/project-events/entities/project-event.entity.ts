@@ -29,7 +29,7 @@ export class ProjectEvent {
   @Column({ type: 'jsonb', nullable: true })
   payload: any;
 
-  @Column({ name: 'actor_id', nullable: true })
+  @Column({ name: 'actor_id', type: 'varchar', nullable: true })
   actorId: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

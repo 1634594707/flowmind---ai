@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ProjectsService } from './projects.service';
 import { Project } from './entities/project.entity';
 
-type MockRepo<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
+type MockRepo<T extends object> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 const buildProject = (overrides?: Partial<Project>): Project => {
   return {
@@ -98,7 +98,9 @@ describe('ProjectsService', () => {
     const project = buildProject({ stage: 'requirements', sdlcTemplate: 'agile' });
     (repo.findOne as jest.Mock).mockResolvedValueOnce(project);
 
-    await expect(service.transitionStage('p1', 'u1', 'testing')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.transitionStage('p1', 'u1', 'testing')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('findAll() should return items and pagination', async () => {

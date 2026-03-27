@@ -53,11 +53,11 @@ export class DocumentsService {
     return doc;
   }
 
-  async findOne(id: string): Promise<Document> {
+  async findOne(id: string): Promise<Document | null> {
     return this.documentsRepository.findOne({ where: { id } });
   }
 
-  async update(id: string, updateDocumentDto: any): Promise<Document> {
+  async update(id: string, updateDocumentDto: any): Promise<Document | null> {
     await this.documentsRepository.update(id, updateDocumentDto);
     return this.findOne(id);
   }

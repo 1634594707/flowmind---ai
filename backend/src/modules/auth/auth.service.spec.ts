@@ -1,8 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { JwtTokenService } from './jwt-token.service';
+import { AuditLogService } from './audit-log.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,8 +16,17 @@ describe('AuthService', () => {
     changePassword: jest.fn(),
   };
 
-  const jwtService = {
-    sign: jest.fn(() => 'token'),
+  const jwtTokenService = {
+    generateTokenPair: jest.fn(() =>
+      Promise.resolve({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      }),
+    ),
+    revokeAllUserSessions: jest.fn(),
+  };
+  const auditLogService = {
+    logAuthentication: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -24,7 +34,8 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
-        { provide: JwtService, useValue: jwtService },
+        { provide: JwtTokenService, useValue: jwtTokenService },
+        { provide: AuditLogService, useValue: auditLogService },
       ],
     }).compile();
 
@@ -41,7 +52,7 @@ describe('AuthService', () => {
   });
 
   it('login() should throw if password invalid', async () => {
-    usersService.findByEmail.mockResolvedValueOnce({ id: 'u1', password: 'hashed' });
+    usersService.findByEmail.mockResolvedValueOnce({ id: 'u1', passwordHash: 'hashed' });
     usersService.validatePassword.mockResolvedValueOnce(false);
 
     await expect(service.login({ email: 'a@b.com', password: 'p' } as any)).rejects.toBeInstanceOf(
@@ -49,7 +60,7 @@ describe('AuthService', () => {
     );
   });
 
-  it('register() should return token and user', async () => {
+  it('register() should return tokens and user', async () => {
     usersService.create.mockResolvedValueOnce({
       id: 'u1',
       name: 'n',
@@ -61,8 +72,63 @@ describe('AuthService', () => {
     });
 
     const result = await service.register({ email: 'a@b.com', password: 'p', name: 'n' } as any);
-    expect(result.token).toBe('token');
-    expect(jwtService.sign).toHaveBeenCalled();
+    expect(result.accessToken).toBe('access-token');
+    expect(result.refreshToken).toBe('refresh-token');
+    expect(jwtTokenService.generateTokenPair).toHaveBeenCalled();
     expect(result.user.email).toBe('a@b.com');
+  });
+
+  it('login() should return tokens and user on success', async () => {
+    usersService.findByEmail.mockResolvedValueOnce({
+      id: 'u1',
+      name: 'n',
+      email: 'a@b.com',
+      avatar: '',
+      role: 'user',
+      passwordHash: 'hashed',
+      createdAt: new Date(),
+      twoFactorEnabled: false,
+    });
+    usersService.validatePassword.mockResolvedValueOnce(true);
+
+    const result = await service.login({ email: 'a@b.com', password: 'p' } as any);
+    expect(result.accessToken).toBe('access-token');
+    expect(result.refreshToken).toBe('refresh-token');
+    expect(result.user.email).toBe('a@b.com');
+  });
+
+  it('login() should require 2FA code when enabled', async () => {
+    usersService.findByEmail.mockResolvedValueOnce({
+      id: 'u1',
+      name: 'n',
+      email: 'a@b.com',
+      avatar: '',
+      role: 'user',
+      passwordHash: 'hashed',
+      createdAt: new Date(),
+      twoFactorEnabled: true,
+      totpSecret: 'secret',
+    });
+    usersService.validatePassword.mockResolvedValueOnce(true);
+
+    await expect(service.login({ email: 'a@b.com', password: 'p' } as any)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('refreshTokens() should generate new token pair', async () => {
+    const result = await service.refreshTokens('u1', 'a@b.com', 'user');
+    expect(result.accessToken).toBe('access-token');
+    expect(result.refreshToken).toBe('refresh-token');
+    expect(jwtTokenService.generateTokenPair).toHaveBeenCalledWith({
+      id: 'u1',
+      email: 'a@b.com',
+      role: 'user',
+    });
+  });
+
+  it('logout() should revoke all user tokens', async () => {
+    await service.logout('u1');
+    expect(jwtTokenService.revokeAllUserSessions).toHaveBeenCalledWith('u1');
   });
 });

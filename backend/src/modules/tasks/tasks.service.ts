@@ -56,7 +56,9 @@ export class TasksService {
       qb.andWhere('task.assigneeId = :assigneeId', { assigneeId: query.assigneeId });
     }
     if (query.sourceDocumentId) {
-      qb.andWhere('task.sourceDocumentId = :sourceDocumentId', { sourceDocumentId: query.sourceDocumentId });
+      qb.andWhere('task.sourceDocumentId = :sourceDocumentId', {
+        sourceDocumentId: query.sourceDocumentId,
+      });
     }
 
     return qb.orderBy('task.updatedAt', 'DESC').getMany();
@@ -74,10 +76,7 @@ export class TasksService {
     return text.trim();
   }
 
-  async decomposeAndCreateTasks(
-    dto: DecomposeTasksDto,
-    userId: string,
-  ): Promise<Task[]> {
+  async decomposeAndCreateTasks(dto: DecomposeTasksDto, userId: string): Promise<Task[]> {
     if (!dto.projectId) {
       throw new BadRequestException('projectId is required');
     }
@@ -155,7 +154,7 @@ export class TasksService {
     return (await this.tasksRepository.save(entities as any)) as unknown as Task[];
   }
 
-  async findOne(id: string): Promise<Task> {
+  async findOne(id: string): Promise<Task | null> {
     return this.tasksRepository.findOne({ where: { id } });
   }
 
@@ -174,7 +173,7 @@ export class TasksService {
     return task;
   }
 
-  async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task> {
+  async update(id: string, updateTaskDto: UpdateTaskDto): Promise<Task | null> {
     await this.tasksRepository.update(id, updateTaskDto);
     return this.findOne(id);
   }

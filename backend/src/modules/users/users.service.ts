@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
@@ -19,7 +19,7 @@ export class UsersService {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
     const user = this.usersRepository.create({
       ...createUserDto,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
     });
     return (await this.usersRepository.save(user)) as unknown as User;
   }
@@ -72,11 +72,11 @@ export class UsersService {
     newPassword: string,
   ): Promise<void> {
     const user = await this.findOne(userId);
-    const isPasswordValid = await this.validatePassword(currentPassword, user.password);
+    const isPasswordValid = await this.validatePassword(currentPassword, user.passwordHash);
     if (!isPasswordValid) {
       throw new BadRequestException('当前密码错误');
     }
-    user.password = await this.hashPassword(newPassword);
+    user.passwordHash = await this.hashPassword(newPassword);
     await this.usersRepository.save(user);
   }
 

@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, Request, UseGuards } from '@nestjs/commo
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectsService } from '../projects/projects.service';
 import { ProjectEventsService } from './project-events.service';
+import { AuthenticatedRequest } from '../../common/types/request.interface';
 
 @Controller('projects/:projectId/events')
 @UseGuards(JwtAuthGuard)
@@ -15,7 +16,7 @@ export class ProjectEventsController {
   async getRecent(
     @Param('projectId') projectId: string,
     @Query('limit') limit: string | undefined,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     await this.projectsService.findOneForUser(projectId, req.user.userId);
 

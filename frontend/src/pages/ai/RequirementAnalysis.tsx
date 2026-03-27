@@ -1,270 +1,361 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Card, Input, Button, Select, message, Typography, Divider, List } from 'antd'
-import type { AxiosError } from 'axios'
-import ReactMarkdown from 'react-markdown'
-import type { Components } from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { aiService, type RequirementMessage, type RequirementSession } from '../../services/ai.service'
-import { projectService, type Project } from '../../services/project.service'
-import DocumentEditorModal from '@/components/documents/DocumentEditorModal'
-import { LoadingBlock, PageHeader } from '@/components/ui'
+import { useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
+import { Card, Input, Button, Select, message, Typography, Divider, List } from 'antd';
+import type { AxiosError } from 'axios';
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import {
+  aiService,
+  type RequirementMessage,
+  type RequirementSession,
+} from '../../services/ai.service';
+import { projectService, type Project } from '../../services/project.service';
+import DocumentEditorModal from '@/components/documents/DocumentEditorModal';
+import { LoadingBlock, PageHeader } from '@/components/ui';
+import { streamChat } from '@/utils/streamChat';
 
-const { TextArea } = Input
-const { Text } = Typography
+const { TextArea } = Input;
+const { Text } = Typography;
 
 const RequirementAnalysis = () => {
-  const [projectsLoading, setProjectsLoading] = useState(false)
-  const [projects, setProjects] = useState<Project[]>([])
-  const [projectId, setProjectId] = useState<string>('')
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState<string>('');
 
-  const [creatingSession, setCreatingSession] = useState(false)
-  const [sessionTitle, setSessionTitle] = useState('')
-  const [sessionSummary, setSessionSummary] = useState('')
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [sessionSummary, setSessionSummary] = useState('');
 
-  const [sessionsLoading, setSessionsLoading] = useState(false)
-  const [sessions, setSessions] = useState<RequirementSession[]>([])
-  const [sessionPreviews, setSessionPreviews] = useState<Record<string, string>>({})
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessions, setSessions] = useState<RequirementSession[]>([]);
+  const [sessionPreviews, setSessionPreviews] = useState<Record<string, string>>({});
 
-  const [sessionLoading, setSessionLoading] = useState(false)
-  const [session, setSession] = useState<RequirementSession | null>(null)
-  const [messages, setMessages] = useState<RequirementMessage[]>([])
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [session, setSession] = useState<RequirementSession | null>(null);
+  const [messages, setMessages] = useState<RequirementMessage[]>([]);
 
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
 
-  const [generating, setGenerating] = useState(false)
-  const [prdContent, setPrdContent] = useState('')
-  const [prdDocumentId, setPrdDocumentId] = useState<string>('')
+  const [generating, setGenerating] = useState(false);
+  const [prdContent, setPrdContent] = useState('');
+  const [prdDocumentId, setPrdDocumentId] = useState<string>('');
+  const [streamingPrd, setStreamingPrd] = useState(false);
+  const streamAbortRef = useRef<boolean>(false);
 
-  const [prdEditorOpen, setPrdEditorOpen] = useState(false)
+  const [prdEditorOpen, setPrdEditorOpen] = useState(false);
 
   const projectName = useMemo(() => {
-    return projects.find((p) => p.id === projectId)?.name || ''
-  }, [projects, projectId])
+    return projects.find(p => p.id === projectId)?.name || '';
+  }, [projects, projectId]);
 
   const formatId = useCallback((id: string, left = 8, right = 6) => {
     if (!id) {
-      return ''
+      return '';
     }
     if (id.length <= left + right + 3) {
-      return id
+      return id;
     }
-    return `${id.slice(0, left)}...${id.slice(-right)}`
-  }, [])
+    return `${id.slice(0, left)}...${id.slice(-right)}`;
+  }, []);
 
   const formatShortId = useCallback(
     (id: string) => {
-      const formatted = formatId(id)
-      return formatted ? `#${formatted}` : ''
+      const formatted = formatId(id);
+      return formatted ? `#${formatted}` : '';
     },
-    [formatId],
-  )
+    [formatId]
+  );
 
   const buildPreview = useCallback((text: string) => {
-    const normalized = text.replace(/\s+/g, ' ').trim()
+    const normalized = text.replace(/\s+/g, ' ').trim();
     if (!normalized) {
-      return ''
+      return '';
     }
-    return normalized.length > 60 ? `${normalized.slice(0, 60)}...` : normalized
-  }, [])
+    return normalized.length > 60 ? `${normalized.slice(0, 60)}...` : normalized;
+  }, []);
 
   const markdownComponents = useMemo<Components>(() => {
     return {
-      h1: ({ children }: { children?: ReactNode }) => <h1 className="text-lg font-semibold my-2">{children}</h1>,
-      h2: ({ children }: { children?: ReactNode }) => <h2 className="text-base font-semibold my-2">{children}</h2>,
-      h3: ({ children }: { children?: ReactNode }) => <h3 className="text-sm font-semibold my-2">{children}</h3>,
-      p: ({ children }: { children?: ReactNode }) => <p className="my-1 whitespace-pre-wrap">{children}</p>,
-      ul: ({ children }: { children?: ReactNode }) => <ul className="list-disc pl-5 my-1">{children}</ul>,
-      ol: ({ children }: { children?: ReactNode }) => <ol className="list-decimal pl-5 my-1">{children}</ol>,
+      h1: ({ children }: { children?: ReactNode }) => (
+        <h1 className="text-lg font-semibold my-2">{children}</h1>
+      ),
+      h2: ({ children }: { children?: ReactNode }) => (
+        <h2 className="text-base font-semibold my-2">{children}</h2>
+      ),
+      h3: ({ children }: { children?: ReactNode }) => (
+        <h3 className="text-sm font-semibold my-2">{children}</h3>
+      ),
+      p: ({ children }: { children?: ReactNode }) => (
+        <p className="my-1 whitespace-pre-wrap">{children}</p>
+      ),
+      ul: ({ children }: { children?: ReactNode }) => (
+        <ul className="list-disc pl-5 my-1">{children}</ul>
+      ),
+      ol: ({ children }: { children?: ReactNode }) => (
+        <ol className="list-decimal pl-5 my-1">{children}</ol>
+      ),
       li: ({ children }: { children?: ReactNode }) => <li className="my-0.5">{children}</li>,
-      code: ({ inline, className, children }: { inline?: boolean; className?: string; children?: ReactNode }) => {
+      code: ({
+        inline,
+        className,
+        children,
+      }: {
+        inline?: boolean;
+        className?: string;
+        children?: ReactNode;
+      }) => {
         if (inline) {
-          return <code className="px-1 py-0.5 rounded bg-gray-200">{children}</code>
+          return <code className="px-1 py-0.5 rounded bg-gray-200">{children}</code>;
         }
 
         return (
           <pre className="my-2 overflow-auto rounded bg-gray-900 p-3 text-gray-100">
             <code className={className}>{children}</code>
           </pre>
-        )
+        );
       },
-    }
-  }, [])
+    };
+  }, []);
 
   const formatTime = useCallback((iso: string) => {
-    const d = new Date(iso)
+    const d = new Date(iso);
     if (Number.isNaN(d.getTime())) {
-      return ''
+      return '';
     }
-    return d.toLocaleString()
-  }, [])
+    return d.toLocaleString();
+  }, []);
 
   const loadProjects = useCallback(async () => {
     try {
-      setProjectsLoading(true)
-      const result = await projectService.getAll({ page: 1, limit: 100 })
-      setProjects(result.items)
+      setProjectsLoading(true);
+      const result = await projectService.getAll({ page: 1, limit: 100 });
+      setProjects(result.items);
       if (!projectId && result.items.length) {
-        setProjectId(result.items[0].id)
+        setProjectId(result.items[0].id);
       }
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '加载项目失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '加载项目失败');
     } finally {
-      setProjectsLoading(false)
+      setProjectsLoading(false);
     }
-  }, [projectId])
+  }, [projectId]);
 
   const loadSessions = useCallback(async () => {
     if (!projectId) {
-      setSessions([])
-      return
+      setSessions([]);
+      return;
     }
 
     try {
-      setSessionsLoading(true)
-      const data = await aiService.listRequirementSessions(projectId)
-      setSessions(data)
-      setSessionPreviews((prev) => {
-        const next = { ...prev }
+      setSessionsLoading(true);
+      const data = await aiService.listRequirementSessions(projectId);
+      setSessions(data);
+      setSessionPreviews(prev => {
+        const next = { ...prev };
         for (const s of data) {
           if (!next[s.id]) {
-            const base = s.lastMessage?.content ? s.lastMessage.content : s.summary ? s.summary : ''
-            next[s.id] = base ? buildPreview(base) : ''
+            const base = s.lastMessage?.content
+              ? s.lastMessage.content
+              : s.summary
+                ? s.summary
+                : '';
+            next[s.id] = base ? buildPreview(base) : '';
           }
         }
-        return next
-      })
+        return next;
+      });
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '加载会话列表失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '加载会话列表失败');
     } finally {
-      setSessionsLoading(false)
+      setSessionsLoading(false);
     }
-  }, [projectId, buildPreview])
+  }, [projectId, buildPreview]);
 
   useEffect(() => {
-    void loadProjects()
-  }, [loadProjects])
+    void loadProjects();
+  }, [loadProjects]);
 
   useEffect(() => {
-    void loadSessions()
-  }, [loadSessions])
+    void loadSessions();
+  }, [loadSessions]);
 
   const canCreateSession = useMemo(() => {
-    return !!projectId && sessionTitle.trim().length > 0
-  }, [projectId, sessionTitle])
+    return !!projectId && sessionTitle.trim().length > 0;
+  }, [projectId, sessionTitle]);
 
   const handleCreateSession = async () => {
     if (!canCreateSession) {
-      return
+      return;
     }
     try {
-      setCreatingSession(true)
+      setCreatingSession(true);
       const created = await aiService.createRequirementSession({
         projectId,
         title: sessionTitle.trim(),
         summary: sessionSummary.trim() || undefined,
-      })
-      setSession(created)
-      setSessions((prev) => [created, ...prev])
-      setMessages([])
-      setPrdContent('')
-      setPrdDocumentId('')
-      message.success('会话创建成功')
+      });
+      setSession(created);
+      setSessions(prev => [created, ...prev]);
+      setMessages([]);
+      setPrdContent('');
+      setPrdDocumentId('');
+      message.success('会话创建成功');
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '创建会话失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '创建会话失败');
     } finally {
-      setCreatingSession(false)
+      setCreatingSession(false);
     }
-  }
+  };
 
   const handleSend = async () => {
     if (!session || !input.trim()) {
-      return
+      return;
     }
 
-    const content = input.trim()
-    setInput('')
+    const content = input.trim();
+    setInput('');
 
     try {
-      setSending(true)
-      const result = await aiService.chat(session.id, content)
-      setMessages((prev) => [...prev, result.userMessage, result.assistantMessage])
-      setSessions((prev) => prev.map((s) => (s.id === session.id ? { ...s, updatedAt: new Date().toISOString() } : s)))
-      setSessionPreviews((prev) => ({
+      setSending(true);
+      const result = await aiService.chat(session.id, content);
+      setMessages(prev => [...prev, result.userMessage, result.assistantMessage]);
+      setSessions(prev =>
+        prev.map(s => (s.id === session.id ? { ...s, updatedAt: new Date().toISOString() } : s))
+      );
+      setSessionPreviews(prev => ({
         ...prev,
         [session.id]: buildPreview(result.assistantMessage.content || result.userMessage.content),
-      }))
+      }));
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '发送失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '发送失败');
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
   const handleGeneratePrd = async () => {
     if (!session) {
-      return
+      return;
     }
     try {
-      setGenerating(true)
-      const result = await aiService.generatePrd(session.id, {
-        documentTitle: `${session.title} - PRD`,
-      })
-      setPrdContent(result.content)
-      setPrdDocumentId(result.document.id)
-      message.success('PRD 已生成并保存为文档')
+      setGenerating(true);
+      setPrdContent('');
+      setPrdDocumentId('');
+      setStreamingPrd(true);
+      streamAbortRef.current = false;
+
+      // 构建消息历史用于流式生成
+      const systemPrompt = [
+        '你是资深产品经理。请基于以下需求访谈对话，生成一份完整的 PRD（产品需求文档）。',
+        '要求：',
+        '- 输出标准 PRD 结构：背景与目标、用户故事、功能需求、非功能需求、验收标准。',
+        '- 使用 Markdown 格式，层次清晰。',
+        '- 内容具体可落地，避免模糊描述。',
+        '- 不要输出与 PRD 无关的解释。',
+      ].join('\n');
+
+      const chatHistory = messages.map(m => ({
+        role: m.role as 'user' | 'assistant' | 'system',
+        content: m.content,
+      }));
+
+      let streamedContent = '';
+
+      try {
+        await streamChat({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...chatHistory,
+            { role: 'user', content: '请基于以上对话生成完整的 PRD 文档。' },
+          ],
+          temperature: 0.2,
+          onChunk: delta => {
+            if (streamAbortRef.current) return;
+            streamedContent += delta;
+            setPrdContent(streamedContent);
+          },
+          onError: err => {
+            message.error(`流式生成失败：${err}，将使用标准模式重试`);
+          },
+        });
+      } catch {
+        // 流式失败，回退到标准模式
+        streamedContent = '';
+      }
+
+      // 流式完成后保存文档
+      if (streamedContent) {
+        setStreamingPrd(false);
+        const result = await aiService.generatePrd(session.id, {
+          documentTitle: `${session.title} - PRD`,
+        });
+        // 用流式内容更新文档
+        setPrdContent(result.content || streamedContent);
+        setPrdDocumentId(result.document.id);
+        message.success('PRD 已生成并保存为文档');
+      } else {
+        // 完全回退到标准模式
+        const result = await aiService.generatePrd(session.id, {
+          documentTitle: `${session.title} - PRD`,
+        });
+        setPrdContent(result.content);
+        setPrdDocumentId(result.document.id);
+        message.success('PRD 已生成并保存为文档');
+      }
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '生成 PRD 失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '生成 PRD 失败');
     } finally {
-      setGenerating(false)
+      setGenerating(false);
+      setStreamingPrd(false);
     }
-  }
+  };
 
   const handleReloadSession = async () => {
     if (!session) {
-      return
+      return;
     }
     try {
-      setSessionLoading(true)
-      const data = await aiService.getRequirementSession(session.id)
-      setSession(data)
-      setMessages(data.messages || [])
-      const last = data.messages?.length ? data.messages[data.messages.length - 1] : undefined
+      setSessionLoading(true);
+      const data = await aiService.getRequirementSession(session.id);
+      setSession(data);
+      setMessages(data.messages || []);
+      const last = data.messages?.length ? data.messages[data.messages.length - 1] : undefined;
       if (last?.content) {
-        setSessionPreviews((prev) => ({ ...prev, [data.id]: buildPreview(last.content) }))
+        setSessionPreviews(prev => ({ ...prev, [data.id]: buildPreview(last.content) }));
       }
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '加载会话失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '加载会话失败');
     } finally {
-      setSessionLoading(false)
+      setSessionLoading(false);
     }
-  }
+  };
 
   const handleSelectSession = async (selected: RequirementSession) => {
     try {
-      setSessionLoading(true)
-      const data = await aiService.getRequirementSession(selected.id)
-      setSession(data)
-      setMessages(data.messages || [])
-      setPrdContent('')
-      setPrdDocumentId('')
-      const last = data.messages?.length ? data.messages[data.messages.length - 1] : undefined
+      setSessionLoading(true);
+      const data = await aiService.getRequirementSession(selected.id);
+      setSession(data);
+      setMessages(data.messages || []);
+      setPrdContent('');
+      setPrdDocumentId('');
+      const last = data.messages?.length ? data.messages[data.messages.length - 1] : undefined;
       if (last?.content) {
-        setSessionPreviews((prev) => ({ ...prev, [data.id]: buildPreview(last.content) }))
+        setSessionPreviews(prev => ({ ...prev, [data.id]: buildPreview(last.content) }));
       }
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      message.error(err.response?.data?.message || '加载会话失败')
+      const err = error as AxiosError<{ message?: string }>;
+      message.error(err.response?.data?.message || '加载会话失败');
     } finally {
-      setSessionLoading(false)
+      setSessionLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -278,8 +369,8 @@ const RequirementAnalysis = () => {
               className="w-full"
               value={projectId || undefined}
               loading={projectsLoading}
-              onChange={(v) => setProjectId(v)}
-              options={projects.map((p) => ({ value: p.id, label: p.name }))}
+              onChange={v => setProjectId(v)}
+              options={projects.map(p => ({ value: p.id, label: p.name }))}
               placeholder="请选择项目"
               showSearch
               optionFilterProp="label"
@@ -288,7 +379,11 @@ const RequirementAnalysis = () => {
 
           <div className="md:col-span-2">
             <div className="text-sm text-gray-600 mb-2">会话标题</div>
-            <Input value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} placeholder="例如：电商购物车需求访谈" />
+            <Input
+              value={sessionTitle}
+              onChange={e => setSessionTitle(e.target.value)}
+              placeholder="例如：电商购物车需求访谈"
+            />
           </div>
 
           <div className="md:col-span-3">
@@ -296,7 +391,7 @@ const RequirementAnalysis = () => {
             <TextArea
               rows={3}
               value={sessionSummary}
-              onChange={(e) => setSessionSummary(e.target.value)}
+              onChange={e => setSessionSummary(e.target.value)}
               placeholder="例如：提升下单转化率，支持多规格商品、促销与库存校验"
             />
           </div>
@@ -327,7 +422,9 @@ const RequirementAnalysis = () => {
           <div className="text-sm text-gray-500">
             当前项目：
             {projectId ? (
-              <Text copyable={{ text: projectId }}>{projectName ? projectName : formatId(projectId)}</Text>
+              <Text copyable={{ text: projectId }}>
+                {projectName ? projectName : formatId(projectId)}
+              </Text>
             ) : (
               '未选择'
             )}
@@ -341,7 +438,7 @@ const RequirementAnalysis = () => {
         ) : (
           <List
             dataSource={sessions}
-            renderItem={(item) => (
+            renderItem={item => (
               <List.Item
                 className={
                   session?.id === item.id
@@ -358,8 +455,12 @@ const RequirementAnalysis = () => {
                       <div className="text-gray-500 text-xs">
                         <Text copyable={{ text: item.id }}>{formatShortId(item.id)}</Text>
                       </div>
-                      {sessionPreviews[item.id] ? <div className="text-gray-600 text-xs">{sessionPreviews[item.id]}</div> : null}
-                      <div className="text-gray-400 text-xs">更新时间：{formatTime(item.updatedAt)}</div>
+                      {sessionPreviews[item.id] ? (
+                        <div className="text-gray-600 text-xs">{sessionPreviews[item.id]}</div>
+                      ) : null}
+                      <div className="text-gray-400 text-xs">
+                        更新时间：{formatTime(item.updatedAt)}
+                      </div>
                     </div>
                   }
                 />
@@ -378,14 +479,20 @@ const RequirementAnalysis = () => {
               <div>
                 <div className="text-lg font-semibold text-gray-900">{session.title}</div>
                 <div className="text-sm text-gray-500">
-                  Session ID: <Text copyable={{ text: session.id }}>{formatShortId(session.id)}</Text>
+                  Session ID:{' '}
+                  <Text copyable={{ text: session.id }}>{formatShortId(session.id)}</Text>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button onClick={() => void handleReloadSession()} loading={sessionLoading}>
                   同步消息
                 </Button>
-                <Button type="primary" className="bg-orange-500 hover:bg-orange-600" onClick={() => void handleGeneratePrd()} loading={generating}>
+                <Button
+                  type="primary"
+                  className="bg-orange-500 hover:bg-orange-600"
+                  onClick={() => void handleGeneratePrd()}
+                  loading={generating}
+                >
                   生成 PRD
                 </Button>
               </div>
@@ -397,7 +504,7 @@ const RequirementAnalysis = () => {
               {messages.length === 0 ? (
                 <div className="text-gray-500">还没有消息，先从一句需求描述开始。</div>
               ) : (
-                messages.map((m) => (
+                messages.map(m => (
                   <div key={m.id} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                     <div
                       className={
@@ -407,10 +514,7 @@ const RequirementAnalysis = () => {
                       }
                     >
                       <div className={m.role === 'user' ? '[&_*]:text-white' : ''}>
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={markdownComponents}
-                        >
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {m.content}
                         </ReactMarkdown>
                       </div>
@@ -424,10 +528,15 @@ const RequirementAnalysis = () => {
               <TextArea
                 rows={3}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={e => setInput(e.target.value)}
                 placeholder="输入你的需求描述/补充信息，然后发送"
               />
-              <Button type="primary" className="bg-purple-600 hover:bg-purple-700" loading={sending} onClick={() => void handleSend()}>
+              <Button
+                type="primary"
+                className="bg-purple-600 hover:bg-purple-700"
+                loading={sending}
+                onClick={() => void handleSend()}
+              >
                 发送
               </Button>
             </div>
@@ -437,23 +546,28 @@ const RequirementAnalysis = () => {
 
       <Card className="rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-lg font-semibold text-gray-900">PRD 输出</div>
+          <div className="text-lg font-semibold text-gray-900">
+            PRD 输出
+            {streamingPrd && (
+              <span className="ml-2 text-sm font-normal text-purple-600 animate-pulse">
+                AI 正在生成...
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {prdDocumentId ? (
               <div className="text-sm text-gray-500">
-                Document ID: <Text copyable={{ text: prdDocumentId }}>{formatShortId(prdDocumentId)}</Text>
+                Document ID:{' '}
+                <Text copyable={{ text: prdDocumentId }}>{formatShortId(prdDocumentId)}</Text>
               </div>
             ) : null}
-            <Button
-              onClick={() => setPrdEditorOpen(true)}
-              disabled={!prdDocumentId}
-            >
+            <Button onClick={() => setPrdEditorOpen(true)} disabled={!prdDocumentId}>
               编辑 PRD
             </Button>
           </div>
         </div>
 
-        {generating ? (
+        {generating && !streamingPrd ? (
           <LoadingBlock />
         ) : (
           <div className="bg-white border border-gray-200 rounded-lg p-4 max-h-[520px] overflow-auto">
@@ -462,7 +576,9 @@ const RequirementAnalysis = () => {
                 {prdContent}
               </ReactMarkdown>
             ) : (
-              <div className="text-gray-500">点击“生成 PRD”后，这里会显示生成的 PRD（Markdown）</div>
+              <div className="text-gray-500">
+                点击“生成 PRD”后，这里会显示生成的 PRD（Markdown）
+              </div>
             )}
           </div>
         )}
@@ -472,12 +588,12 @@ const RequirementAnalysis = () => {
         open={prdEditorOpen}
         documentId={prdDocumentId}
         onClose={() => setPrdEditorOpen(false)}
-        onSaved={(doc) => {
-          setPrdContent(doc.content)
+        onSaved={doc => {
+          setPrdContent(doc.content);
         }}
       />
     </div>
-  )
-}
+  );
+};
 
-export default RequirementAnalysis
+export default RequirementAnalysis;

@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { IntegrationsGithubService } from './integrations-github.service';
 import { BindGithubRepoDto } from './dto/bind-github-repo.dto';
+import { AuthenticatedRequest } from '../../common/types/request.interface';
 
 @Controller('integrations/github')
 export class IntegrationsGithubController {
@@ -10,7 +11,10 @@ export class IntegrationsGithubController {
 
   @Get('connect')
   @UseGuards(JwtAuthGuard)
-  async connect(@Request() req, @Query('projectId') projectId: string | undefined) {
+  async connect(
+    @Request() req: AuthenticatedRequest,
+    @Query('projectId') projectId: string | undefined,
+  ) {
     const url = this.githubService.createConnectUrl(req.user.userId, projectId);
     return {
       code: 200,
@@ -21,7 +25,7 @@ export class IntegrationsGithubController {
   @Get('connect/redirect')
   @UseGuards(JwtAuthGuard)
   async connectRedirect(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Query('projectId') projectId: string | undefined,
     @Res() res: Response,
   ) {
@@ -38,7 +42,7 @@ export class IntegrationsGithubController {
 
   @Get('repos')
   @UseGuards(JwtAuthGuard)
-  async repos(@Request() req) {
+  async repos(@Request() req: AuthenticatedRequest) {
     const repos = await this.githubService.listReposForUser(req.user.userId);
     return {
       code: 200,
@@ -48,7 +52,7 @@ export class IntegrationsGithubController {
 
   @Get('binding')
   @UseGuards(JwtAuthGuard)
-  async binding(@Request() req, @Query('projectId') projectId: string) {
+  async binding(@Request() req: AuthenticatedRequest, @Query('projectId') projectId: string) {
     const row = await this.githubService.getProjectBinding(req.user.userId, projectId);
     return {
       code: 200,
@@ -58,8 +62,12 @@ export class IntegrationsGithubController {
 
   @Post('bind')
   @UseGuards(JwtAuthGuard)
-  async bind(@Request() req, @Body() dto: BindGithubRepoDto) {
-    const row = await this.githubService.bindRepoToProject(req.user.userId, dto.projectId, dto.fullName);
+  async bind(@Request() req: AuthenticatedRequest, @Body() dto: BindGithubRepoDto) {
+    const row = await this.githubService.bindRepoToProject(
+      req.user.userId,
+      dto.projectId,
+      dto.fullName,
+    );
     return {
       code: 200,
       message: '绑定成功',

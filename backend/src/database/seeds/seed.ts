@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { User } from '../../modules/users/entities/user.entity';
 import { Project } from '../../modules/projects/entities/project.entity';
 import { Task } from '../../modules/tasks/entities/task.entity';

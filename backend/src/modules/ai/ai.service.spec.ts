@@ -10,7 +10,7 @@ import { ProjectsService } from '../projects/projects.service';
 import { DocumentsService } from '../documents/documents.service';
 import { LlmService } from './llm.service';
 
-type MockRepo<T> = Partial<Record<keyof Repository<T>, jest.Mock>>;
+type MockRepo<T extends object> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 describe('AiService', () => {
   let service: AiService;
